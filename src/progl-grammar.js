@@ -8,23 +8,28 @@ var grammar = {
       "esc": "\\\\",
       "int": "-?(?:[0-9]|[1-9][0-9]+)",
       "exp": "(?:[eE][-+]?[0-9]+)",
-      "frac": "(?:\\.[0-9]+)"
+      "frac": "(?:\\.[0-9]+)",
+      "br": "[\\n\\r;,]+"			
     },
     "rules": [
 			["\\/\\*[\\S\\s]*\\*\\/", "return;"],//COMMENT
 			["\\#[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 			["\\\/\\\/[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 			["\`(\\.|[^\\\`])*\`", 
-			 "yytext = yytext.replace(/^\\s*\`/, '').replace(/\`\\s*$/, ''); return 'Native';"],			
+			 "yytext = yytext.substr(1, yyleng-2); return 'Native';"],
 			["\"(\\.|[^\\\"])*\"",
-			 "yytext = yytext.replace(/^\\s*\"/, '').replace(/\"\\s*$/, ''); return 'String';"],
+			 "yytext = yytext.substr(1, yyleng-2); return 'String';"],
 			["\'(\\.|[^\\\'])*\'",
-       "yytext = yytext.replace(/^\\s*\'/, '').replace(/\'\\s*$/, ''); return 'String';"],
+			 "yytext = yytext.substr(1, yyleng-2); return 'String';"],
+			["\<(?:{letter}|{digit}|\\s)*>",
+       "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'Relstr';"],
       ["\\\\[\\r\\n;]+", "return"],//allow \ at end of line
-			["\\$?{letter}({letter}|{digit}|\/)*", 
-			 "yytext = yytext.replace(/\\s/g, '');return 'Id'"],
-      ["{int}{frac}?{exp}?\\b",
-			 "yytext = yytext.replace(/\\s/g, ''); return 'Number';"],
+			["{letter}({letter}|{digit})*", "return 'Id'"],
+			["\\${letter}({letter}|{digit})*",
+			 "yytext = yytext.substr(1);return 'Reg'"],
+			["\\${digit}*", 
+			 "yytext = yytext.substr(1);return 'Reg'"],
+      ["{int}{frac}?{exp}?\\b", "return 'Number';"],
       ["\\.", "return '.'"],
 			["\\=\\>", "return '=>'"],			
       ["\\(", "return '('"],
@@ -59,10 +64,11 @@ var grammar = {
 			["\\^", "return '^'"],
 			["\\.", "return '.'"],
 			["\\:", "return ':'"],
-      [",", "return ','"],
-      [";", "return ','"],
+			["{br}", "return ','"],
+//      [",", "return ','"],
+//      [";", "return ','"],
 			["\\_", "return 'Undefined'"],
-			["[\\n\\r ]","return"]
+			["\\s","return"]
     ]
   },
 	"operators": [
@@ -93,15 +99,26 @@ var grammar = {
 			["String", "$$ = ['obj', 'String', $1]"],
 			["Undefined", "$$ = ['obj', 'Undefined']"],
 			["Native", "$$ = ['native', $1]"],
+			["@ Native", "$$ = ['tpl', $2]"],			
 			["Id", "$$ = ['id', $1]"],
-			["@ Id", "$$ = ['local', $2]"],
+			["Reg", "$$ = ['reg', $1]"],
+			["@ Id", "$$ = ['global', $2]"],
+			["@ String", "$$ = ['global', $2]"],			
 			["Addr", "$$ = ['addr', $1]"],
 			["Block", "$$ = ['block', $1]"],
 			["Function", "$$ = ['function', $1]"],
+			["Class", "$$ = ['class', $1]"],			
+			["Hash", "$$ = ['hash', $1]"],
+			["Rels Hash", "$$ = ['cpt', $2, $1]"],
+			["Rels", "$$ = ['brch', $1]"],			
 			["Call", "$$ = ['call', $1]"],
-			["Cpt", "$$ = ['cpt', $1]"],
-			["@ Cpt", "$$ = ['brch', $2]"],			
+			["Assign", "$$ = ['assign', $1]"],
+			["New", "$$ = ['new', $1]"],
+			["~ Raw", "$$ = ['return', $2]"],			
 			["( Raw )", "$$ = $2"]
+		],
+		Rels: [
+			["Relstr", "$$ = $1.split(/\\s+/)"]
 		],
 		"Addr": [
 			["Id . KeyCall", "$$ = [['id', $1], $3]"],
@@ -117,23 +134,25 @@ var grammar = {
 		],
 		"Block": [
 			["{ }", "$$= []"],
-			["{ Elements }", "$$ = $2"]
+			["{ Raws }", "$$ = $2"],
 		],
-		"Elements": [
-      ["Element", "$$ = []; $1[0] !== undefined?$$[$1[0]] = $1[1]:$$.push($1[1])"],
-      ["Elements , Element", "$$ = $1; $3[0] !== undefined?$$[$3[0]] = $3[1]:$$.push($3[1]);"],
-			["Elements ,", "$$ = $1"],			//allow additional ,;
+		"Raws": [
+      [",", "$$ = [];"],			
+      ["Raw", "$$ = [$1];"],
+      [", Raw", "$$ = [$2];"],			
+      ["Raws , Raw", "$$ = $1; $1.push($3);"],
+			["Raws ,", "$$ = $1"],			//allow additional ,;
 		],
 		"KeyColon": [
 			["Id :", "$$ = $1"],
 			["String :", "$$ = $1"],
 			["Number :", "$$ = $1"]
 		],
-		"Element": [
-      ["Raw", "$$ = [,$1]"],
-      ["KeyColon Raw", "$$ = [$1, $2]"],
-		],
 		"Function": [
+			["FunctionBody", "$$= $1;"],
+			["Id FunctionBody", "$$= $2; $$[3] = $1"]
+		],
+		"FunctionBody": [
 			["=> Block", "$$ = [$2, []]"],//block in out
 			["=> Argdef Block", "$$ = [$3, $2]"],
 			["=> Id Argdef Block", "$$ = [$4, $3, $2]"]
@@ -141,27 +160,38 @@ var grammar = {
 		"Argdef": [
 			["( )", "$$= []"],
 			["( Subdefs )", "$$= $2"],
-			["Subdef", "$$=[];$$[$1[0]] = $1[1]"]
+			["Subdef", "$$=[$1]"]
 		],
     "Subdefs": [
-      ["Subdef", "$$ = []; $$[$1[0]] = $1[1]"],
-			["Subdefs , Subdef", "$$ = $1; $1[$3[0]] = $3[1]"]
+      ["Subdef", "$$ = [$1]; "],
+			["Subdefs , Subdef", "$$ = $1; $1.push($3)"]
     ],
 		"Subdef": [
-			["Id", "$$ = [$1, []]"],
-			["Id : Id", "$$ = [$1, [$3]]"],
-			["Id = Raw", "$$ = [$1, [, $3]]"],
-			["Id : Id = Raw", "$$ = [$1, [$3, $5]]"]
+			["Id", "$$ = [$1]"],
+			["KeyColon Id", "$$ = [$1, $2]"],
 		],
 		"Call": [
-			["Raw ( )", "$$ = [$1, []];"],
-			["Raw ( Elements )", "$$ = [$1, $3];"],
+			["CallRaw", "$$ = $1"],
 			["Op", "$$ = $1"]
 		],
+		"CallRaw": [
+			["Raw ( )", "$$ = [$1, []];"],
+			["Raw ( Raws )", "$$ = [$1, $3];"]
+		],
+		
+		"Class": [
+			["Id => Rels Block", "$$= [$4, $3, $1]"]
+		],		
+		"New": [
+			["Id { }", "$$ = [$1, []];"],
+			["Id { Raws }", "$$ = [$1, $3];"],
+		],
+		
+		"Assign": [
+			["Raw = Raw", "$$ = [$1, $3]"],
+			["Raw += Raw", "$$ = [$1, ['call', [ ['id', 'plus'], [$1, $3] ] ]]"]
+		],
 		"Op": [
-			["~ Raw", "$$ = [['id', 'return'], [$2]]"],
-			["Raw = Raw", "$$ = [['id', 'assign'], [$3, $1]]"],
-			["Raw += Raw", "$$ = [['id', 'assign'], [ ['call', [ ['id', 'plus'], [$1, $3] ] ], $1]]"],
 			["! Raw", "$$ = [['id', 'not'], [$2]]"],
 			["Raw + Raw", "$$ = [['id', 'plus'], [$1, $3]]"],
 			["Raw - Raw", "$$ = [['id', 'minus'], [$1, $3]]"],
@@ -174,15 +204,9 @@ var grammar = {
 			["Raw > Raw", "$$ = [['id', 'gt'], [$1, $3]]"],
 			["Raw < Raw", "$$ = [['id', 'lt'], [$1, $3]]"]
 		],
-		"Cpt": [
-			["[ ]", "$$ = [[], []]"],
-			["[ Elements ]", "$$ = [$2, []]"],
-			["[ ] [ Rels ]", "$$ = [[], $4]"],
-			["[ Elements ] [ Rels ]", "$$ = [$2, $5]"]
-		],
-		"Rels": [
-			["Id", "$$ = [$1]"],
-			["Rels Id", "$$ = $1; $1.push($2);"]			
+		"Hash": [
+			["[ ]", "$$ = []"],
+			["[ Raws ]", "$$ = $2"]
 		]
   }
 };

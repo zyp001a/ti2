@@ -18,12 +18,6 @@ function get(key, fn){
 	if(fs.existsSync(tpath+'.t')){
 		return fn(fs.readFileSync(tpath +".t").toString() || "");		
 	}
-	if(fs.existsSync(tpath)){
-		if(fs.existsSync(tpath+"/_.t")){
-			return fn(fs.readFileSync(tpath+"/"+"_.t").toString() || "");
-		}
-	}
-	
 	fn();
 }
 function set(key, str, fn){

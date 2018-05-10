@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 var progl = require("../src/progl");
+var utils = require("../src/utils");
+var die = utils.die;
 var fs = require("fs");
 var http = require("http");
 var cmd = process.argv[2];
@@ -11,9 +13,19 @@ case "run":
 	var	tfile = process.argv[3];
 	var str = fs.readFileSync(tfile).toString();
 //	var ti = new Ti({});
-	progl.exec(str, function(rtn){
-		//			console.log("FINAL");
-		//			console.log(rtn);
+	progl.run(str, function(rtn){
+		console.log("FINAL");
+		console.log(rtn);
+	});
+	break;
+case "gen":
+	var	lang = process.argv[4] || "ti";
+	var	tfile = process.argv[3];	
+	var str = fs.readFileSync(tfile).toString();
+//	var ti = new Ti({});
+	progl.gen(str, lang, function(rtn){
+		console.log("FINAL");
+		console.log(rtn);
 	});
 	break;
 case "runp":

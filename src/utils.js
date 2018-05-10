@@ -157,6 +157,16 @@ function copy1(obj){
 	}
 	return newobj;
 }
+function ucfirst(str){
+  str += '';
+  var f = str.charAt(0).toUpperCase();
+  return f + str.substr(1);
+}
+function strlen(str){
+  var m = encodeURIComponent(str).match(/%[89ABab]/g);
+  return str.length + (m ? m.length : 0);
+}
+
 module.exports = {
 	mkdirp: mkdirpSync,
 	eachsync: eachsync,
@@ -166,5 +176,7 @@ module.exports = {
 	die: die,
 	log: log,
 	date: date,
-	copy1: copy1
+	copy1: copy1,
+	ucfirst: ucfirst,
+	strlen: strlen
 }
