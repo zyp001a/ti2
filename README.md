@@ -6,7 +6,7 @@ Native: `console.log(1)`
 Id: a b
 Local: @a @b
 Var: a.b a."c"
-Block: {a:1 b:2 3}
+Block: {1; 2; 3}
  Argdef
  Args
  Calls
@@ -34,3 +34,16 @@ x/b?
 map cptnet to scope -> for run
 
 ## features
+
+naming:
+_brch
+Class
+cpt
+cptClass
+func
+func_cpt
+*_Domain
+
+## pipeline
+read mainfunc
+execMain

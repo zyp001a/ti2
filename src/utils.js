@@ -89,6 +89,13 @@ function mkdirpSync (p, opts, made) {
 function eachsync(arr, fneach, fn){
 	eachSub(arr, fneach, fn, 0);
 }
+function nsync(n, fneach, fn){
+	var arr = [];
+	for(var i =0; i<n; i++){
+		arr.push(i);
+	}
+	eachSub(arr, fneach, fn, 0);
+}
 function eachSub(arr, fneach, fn, nexti){
 	if(nexti == arr.length){
 		fn();
@@ -166,11 +173,39 @@ function strlen(str){
   var m = encodeURIComponent(str).match(/%[89ABab]/g);
   return str.length + (m ? m.length : 0);
 }
+//https://registry.npmjs.org/json-stringify-safe
+module.exports.stringify = stringify;
+function stringify(obj, replacer, spaces, cycleReplacer) {
+  return JSON.stringify(obj, serializer(replacer, cycleReplacer), spaces)
+}
+function serializer(replacer, cycleReplacer) {
+  var stack = [], keys = []
+
+  if (cycleReplacer == null) cycleReplacer = function(key, value) {
+		if(value.__)
+			return "~"+value.__.path;
+		return "~";
+    if (stack[0] === value) return "[Circular ~]"
+    return "[Circular ~." + keys.slice(0, stack.indexOf(value)).join(".") + "]"
+  }
+  return function(key, value) {
+    if (stack.length > 0) {
+      var thisPos = stack.indexOf(this)
+      ~thisPos ? stack.splice(thisPos + 1) : stack.push(this)
+      ~thisPos ? keys.splice(thisPos, Infinity, key) : keys.push(key)
+      if (~stack.indexOf(value)) value = cycleReplacer.call(this, key, value)
+    }
+    else stack.push(value)
+    return replacer == null ? value : replacer.call(this, key, value)
+  }
+}
+
 
 module.exports = {
 	mkdirp: mkdirpSync,
 	eachsync: eachsync,
 	ifsync: ifsync,
+	nsync: nsync,
 	freqadd: freqadd,
 	freqsort: freqsort,
 	die: die,
@@ -178,5 +213,6 @@ module.exports = {
 	date: date,
 	copy1: copy1,
 	ucfirst: ucfirst,
-	strlen: strlen
+	strlen: strlen,
+	stringify: stringify
 }

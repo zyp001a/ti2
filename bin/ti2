@@ -12,8 +12,10 @@ switch(cmd){
 case "run":
 	var	tfile = process.argv[3];
 	var str = fs.readFileSync(tfile).toString();
+	var brchstr = process.argv[4];
+	if(brchstr) brchstr = "_"+brchstr;
 //	var ti = new Ti({});
-	progl.run(str, function(rtn){
+	progl.run(str, brchstr, function(rtn){
 		console.log("FINAL");
 		console.log(rtn);
 	});
@@ -22,11 +24,11 @@ case "gen":
 	var	lang = process.argv[4] || "ti";
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
-//	var ti = new Ti({});
-	progl.gen(str, lang, function(rtn){
+	var brchstr = "_gen/_"+lang;
+	progl.run(str, brchstr, function(rtn){
 		console.log("FINAL");
 		console.log(rtn);
-	});
+	});	
 	break;
 case "runp":
 	var	tfile = process.argv[3];
