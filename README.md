@@ -36,14 +36,19 @@ map cptnet to scope -> for run
 ## features
 
 naming:
-_brch
+_ns
 Class
 cpt
 cptClass
 func
-func_cpt
-*_Domain
+func_Class
+*DOMAIN
 
 ## pipeline
 read mainfunc
 execMain
+
+
+# soul
+_in
+_do

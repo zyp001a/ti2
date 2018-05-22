@@ -37,7 +37,7 @@ function cacheadd(brch, key){
 	}
 	cache[p][key]	= brch[key];
 }
-var _boot;
+var _do;
 var its = {
 	stat: function(fname){
 		this.fn(fs.state(fname));
@@ -54,7 +54,7 @@ var its = {
 	close: function(fd){
 		this.fn(fs.close(fd));
 	},
-	get: function(x, k){
+	addrget: function(x, k){
 		this.fn(newcpt([x, k], "Addr"));
 	},
 	len: function(arr){
@@ -70,25 +70,47 @@ var its = {
 	},
 	require: function(){
 	},
-	execMain: function(main){
+	execmain: function(main){
 		var env = this.env;
 		var fn = this.fn;		
 		execblock(main, env, fn);		
 //		var newcall = newcpt([main, argv], "Call");
 //		exec(newcall, this.env, this.fn);
 	},
-	execCall: function(cpt){
-		var env = this.env;
-		var fn = this.fn;
-		execcall(cpt, env, fn);
+	uncall: function(x){
+		if(typeof x != "object") this.fn(x);
+		var type = x.__.type;
+		x.__.type = "Cpt";
+		var ncpt = newcpt([x, type], "Cpt");
+		this.fn(ncpt);
 	},
-	execBlock: function(cpt){
-		var env = this.env;
-		var fn = this.fn;
-		execblock(cpt, env, fn);
+	ununcall: function(x){
+		if(typeof x != "object") this.fn(x);
+		x[0].__.type = x[1];
+		this.fn(x);		
 	},
-	execCpt: function(cpt){
-		this.fn(cpt);
+	id: function(s){
+		var fn = this.fn;
+		get(this.env.$._brch, s, {local:1}, function(addr){
+			fn(addr);
+		})		
+	},
+	idglobal: function(s){
+		var fn = this.fn;
+		get(rootbrch, s, {local:1, notaddr:1}, function(cpt){
+			fn(cpt);
+		})
+	},
+	get: function(ns, s, conf){
+		if(!conf) conf = {};
+		var fn = this.fn;
+		get(ns, s, conf, function(x){
+			fn(x)
+		})
+	},
+	exec: function(){
+	},
+	eval: function(){
 	},
 	plus: function(l, r){
 		this.fn(l+r);
@@ -144,7 +166,9 @@ function execcall(cpt, env, fn){
 		convert(funcp, "Function", env, function(func){
 //			log(func.__.name);					
 			//generate call stack [args/local, ]
-			var argdefs = func[1][0] || [];//{key, type}
+			var argdefall = func[1] || [];
+			var argdefs = argdefall[0] || [];//{key, type}
+			var rtndef = argdefall[1];
 			var args = cpt[1];
 			var $args = {};
 			var argtmp = [];
@@ -160,7 +184,16 @@ function execcall(cpt, env, fn){
 						})
 					})
 				}, function(xarg){
-					var carg = xarg?xarg[0]:argp;
+					var carg;
+					if(xarg){
+						carg = xarg[0]
+					}else{
+						if(gettype(argp) == "Addr"){
+							carg = addrget(env, argp);
+						}else{
+							carg = argp;
+						}
+					}
 
 					$args[i] = carg;
 					argtmp[i] = carg;
@@ -220,7 +253,6 @@ function newcpt(val, type, brch, name){
 		if(!name){
 			name = hashlen(brch).toString();
 			hashpush(brch, val);
-			c.autoname = 1;
 		}else{
 			brch[name] = val;			
 		}
@@ -261,6 +293,7 @@ function addrset(env, addr, val){
 var rootbrch = newcpt({}, "Brch");
 rootbrch.__.path = "";
 rootbrch.__.level = 0;
+rootbrch.__.isroot = 1;
 function progl2cpt(str, brch, fn){
 	var ast = parser.parse(str);
 	ast2cpt(ast, brch, function(cpt){
@@ -308,12 +341,12 @@ function ast2cpt(ast, brch, fn){
 	case "id":
 		if(Object.getOwnPropertyDescriptor(brch, e)){
 			var ee = brch[e];
-			if(gettype(ee) == "Function" && !ee.__.autoname)//is named function
+			if(ee && ee.__ && ee.__.fixed)//is named function
 				return fn(newcpt([brch,e],"Addr"));
 			return fn(newcpt([0,e],"Addr"));
 		}else if(Object.getOwnPropertyDescriptor(brch.__.brch, e)){
 			var ee = brch.__.brch[e];			
-			if(gettype(ee) == "Function" && !ee.__.autoname)//is named function
+			if(ee && ee.__ && ee.__.fixed)//is named function
 				return fn(newcpt([brch.__.brch,e],"Addr"));			
 			return fn(newcpt([1,e],"Addr"));			
 		}else{
@@ -354,7 +387,10 @@ function ast2cpt(ast, brch, fn){
 		break;		
 	case "function":
 		var newbrch = newcpt({}, "Brch", brch, e[3]?"_"+e[3]:undefined);
-		var func = newcpt([,e[1]], "Function", brch, e[3]);
+		var func = newcpt([], "Function", brch, e[3]);
+		if(e[3])
+			func.__.fixed = 1;
+		if(e[1]) func[1] = e[1];
 		ast2cpt(e[0], newbrch, function(ee){
 			var t = gettype(ee);
 			if(t != "Call" && t!="Block") die(e);
@@ -422,6 +458,7 @@ var intypes = {
 	
 	"Block": 1,	
 	"Function": 1,
+	"Env": 1,
 	
 	"Class": 1,	
 	
@@ -506,16 +543,23 @@ function get(brch, key, config, fn){
 		db.get(brch.__.path+"/"+key, function(str){
 			if(str){
 				progl2cpt(str, brch, function(cpt){
-					if(typeof cpt == "object"){
+					utils.ifsync(typeof cpt == "object", function(fnsub2){
 						var c = cpt.__;
 						c.brch = brch;
 						c.name = key;
 						c.path = brch.__.name + "/" + key;
-						c.autoname = false;						
-					}
-//					if(brch.__.
-					brch[key] = cpt;			
-					fnsub(cpt);
+						c.fixed = 1;						
+						if(brch.__.isroot) return fnsub2()
+						get(brch.__.brch, key, {notaddr: 1, notnew:1}, function(cptpre){
+							if(!cptpre) return fnsub2()
+							if(typeof cptpre != "object") return fnsub2()
+							utils.append1(cpt, cptpre);
+							fnsub2()
+						});
+					}, function(){
+						brch[key] = cpt;
+						fnsub(cpt);
+					});
 				});
 			}else{
 				fnsub();
@@ -538,7 +582,7 @@ function get(brch, key, config, fn){
 	});
 }
 function render(str, env, fn){
-	newenv(function(lbrch, nenv){
+	newenv(function(nenv){
 		for(var k in env.$){
 			nenv.$["_"+k] = env.$[k];
 		}
@@ -594,37 +638,25 @@ function exec(cpt, env, fn){
 
 function newenv(lang, fn){
 	if(!fn){ fn = lang; lang = undefined}
-	get(rootbrch, lang, {local:1, notaddr: 1}, function(lbrch){
-		lbrch.__.rels["_boot"] = _boot;
-		
+	get(_do, lang, {local:1, notaddr: 1}, function(lbrch){
+		if(!lbrch) lbrch = _do;
 		var env = newcpt({
 			$: {},
 			stack: [],
-			brch: lbrch
-		}, "Cpt");
+		}, "Env", lbrch);
 		env.$._brch = lbrch;
 		env.$.$ = env.$;
-		utils.eachsync([
-			"execMain",
-			"execCall",
-			"execCpt",
-			"execBlock",
-		], function(k, fnsub){
-			get(lbrch, k, {notaddr: 1, notnew: 1}, function(cpt){
-				if(!cpt){ die(k + " not defined"); }
-				env[k] = cpt;
-				fnsub();
-			});
-		}, function(){
-			fn(lbrch, env);
+		get(lbrch, "execMain", {notaddr: 1, notnew: 1}, function(cpt){
+			env.execMain = cpt;
+			fn(env);
 		});
 	});
 }
 function init(fn){
-	if(_boot) fn()
+	if(_do) fn()
 	//load boot and native functions
-	get(rootbrch, "_boot", {local:1, notaddr:1}, function(brch){
-		_boot = brch;
+	get(rootbrch, "_do", {local:1, notaddr:1}, function(brch){
+		_do = brch;
 		utils.eachsync(Object.keys(its), function(k, fnsub){
 			get(brch, k, {local:1, notaddr:1}, function(func){
 				func.__.native = its[k]
@@ -642,17 +674,18 @@ function _eval(str, env, fn){
 		});
 	});
 }
-function run(str, lang, fn){
+function run(str, lang, argv, fn){
 	if(!fn){
 		fn = lang;
 		lang = undefined;
 	}
 	init(function(brch){
-		newenv(lang, function(lbrch, env){
-			progl2cpt("{"+str+"\n}",lbrch, function(maincpt){
-				var argvcpt = newcpt(process.argv, "Cpt",lbrch, "argv");
+		var argvcpt = newcpt(argv, "Cpt", _do, "argv");
+		argvcpt.__.fixed = 1		
+		newenv(lang, function(env){
+			progl2cpt("{"+str+"\n}", env.__.brch, function(maincpt){				
 				var newcall = newcpt([env.execMain, [maincpt]], "Call");
-				execcall(newcall, env, function(rtn){
+				exec(newcall, env, function(rtn){
 					fn(rtn);
 				})
 			})

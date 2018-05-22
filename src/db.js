@@ -15,8 +15,8 @@ function setroot(_root){
 
 function get(key, fn){
 	var tpath = path.join(root, key);
-	if(fs.existsSync(tpath+'.t')){
-		return fn(fs.readFileSync(tpath +".t").toString() || "");		
+	if(fs.existsSync(tpath+'.sl')){
+		return fn(fs.readFileSync(tpath +".sl").toString() || "");		
 	}
 	fn();
 }

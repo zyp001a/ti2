@@ -164,6 +164,21 @@ function copy1(obj){
 	}
 	return newobj;
 }
+
+function extend1(obj, obj2){
+	for(var k in obj2){
+		obj[k] = obj2[k]
+	}
+	return obj;
+}
+function append1(obj, obj2){
+	for(var k in obj2){
+		if(!Object.getOwnPropertyDescriptor(obj, k)){
+			obj[k] = obj2[k];
+		}
+	}
+	return obj;
+}
 function ucfirst(str){
   str += '';
   var f = str.charAt(0).toUpperCase();
@@ -212,6 +227,8 @@ module.exports = {
 	log: log,
 	date: date,
 	copy1: copy1,
+	append1: append1,
+	extend1: extend1,		
 	ucfirst: ucfirst,
 	strlen: strlen,
 	stringify: stringify

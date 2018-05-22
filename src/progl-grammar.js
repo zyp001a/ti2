@@ -92,7 +92,8 @@ var grammar = {
 //	"parseParams": ["m"],
   "bnf": {
 		"Start": [
-			["Raw", "return $$ = $1"]
+			["Raw", "return $$ = $1"],
+			["Raw ,", "return $$ = $1"],
 		],
 		"Raw": [			
 			["Number", "$$ = ['obj', 'Number', Number($1)]"],
@@ -113,7 +114,7 @@ var grammar = {
 			["New", "$$ = ['new', $1]"],
 			
 			["Call", "$$ = ['call', $1]"],
-			["Get", "$$ = ['call', [['id', 'get'], $1]]"],			
+			["Addrget", "$$ = ['call', [['id', 'addrget'], $1]]"],			
 			["Assign", "$$ = ['call', [ ['id', 'assign'], $1 ]]"],
 			
 			["~ Raw", "$$ = ['call', [ ['id', 'return'], [$2] ]]"],
@@ -129,10 +130,10 @@ var grammar = {
 		Rels: [
 			["Relstr", "$$ = $1.split(/\\s+/)"]
 		],
-		"Get": [
+		"Addrget": [
 			["Id . KeyCall", "$$ = [['id', $1], $3]"],
 			["String . KeyCall", "$$ = [['obj', 'String', $1], $3]"],
-			["Get . KeyCall", "$$ = [['call', [['id', 'get'], $1]], $3]"],
+			["Addrget . KeyCall", "$$ = [['call', [['id', 'get'], $1]], $3]"],
 			["( Raw ) . KeyCall", "$$ = [$2, $5]"],				
 		],
 		"KeyCall": [
@@ -162,7 +163,7 @@ var grammar = {
 			["Id FunctionBody", "$$= $2; $$[3] = $1"]
 		],
 		"FunctionBody": [
-			["=> Block", "$$ = [['block', $2], [[]]]"],//block in out
+			["=> Block", "$$ = [['block', $2]]"],//block in out
 			["=> Argdef Raw", "$$ = [$3, $2]"],
 //			["=> Id Argdef Block", "$$ = [$4, $3, $2]"]
 		],
@@ -187,7 +188,9 @@ var grammar = {
 		],
 		"CallRaw": [
 			["Addr ( )", "$$ = [$1, []];"],
-			["Addr ( Raws )", "$$ = [$1, $3];"]
+			["Addr ( Raws )", "$$ = [$1, $3];"],
+			["CallRaw ( )", "$$ = [['call', $1]];"],
+			["CallRaw ( Raws )", "$$ = [['call', $1], $3];"],
 		],
 		
 		"Class": [

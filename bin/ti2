@@ -14,18 +14,20 @@ case "run":
 	var str = fs.readFileSync(tfile).toString();
 	var brchstr = process.argv[4];
 	if(brchstr) brchstr = "_"+brchstr;
-//	var ti = new Ti({});
-	progl.run(str, brchstr, function(rtn){
+	//	var ti = new Ti({});
+	var argv = [tfile];
+	progl.run(str, brchstr, argv, function(rtn){
 		console.log("FINAL");
 		console.log(rtn);
 	});
 	break;
 case "gen":
-	var	lang = process.argv[4] || "ti";
+	var	lang = process.argv[4];
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
-	var brchstr = "_gen/_"+lang;
-	progl.run(str, brchstr, function(rtn){
+	var brchstr = lang?"_gen/_"+lang:"_gen";
+	var argv = [tfile]
+	progl.run(str, brchstr, argv, function(rtn){
 		console.log("FINAL");
 		console.log(rtn);
 	});	
