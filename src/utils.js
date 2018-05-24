@@ -214,8 +214,19 @@ function serializer(replacer, cycleReplacer) {
     return replacer == null ? value : replacer.call(this, key, value)
   }
 }
-
-
+async function tp(func, args){
+  if(!args) args = [];
+  function newfunc(){
+    return new Promise(function(resolve){
+      args.push(resolve);
+      func.apply(undefined, args);
+    });
+  }
+  return await newfunc();
+}
+function isarr(obj){
+	return Array.isArray(obj)
+}
 module.exports = {
 	mkdirp: mkdirpSync,
 	eachsync: eachsync,
@@ -231,5 +242,7 @@ module.exports = {
 	extend1: extend1,		
 	ucfirst: ucfirst,
 	strlen: strlen,
-	stringify: stringify
+	stringify: stringify,
+	tp: tp,
+	isarr: isarr,
 }

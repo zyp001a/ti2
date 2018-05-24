@@ -1,3 +1,3 @@
-=>(arr: Cpt, e){
+=>(arr, e){
  ~arr.(string(len(arr))) = e;
 }

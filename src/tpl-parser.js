@@ -84,7 +84,7 @@ performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* actio
 var $0 = $$.length - 1;
 switch (yystate) {
 case 1:
-return this.$ = "$arr = [];push($arr, \"" + $$[$0] + "\");join($arr, \"\");"
+return this.$ = "$arr$ = [];push($arr$, \"" + $$[$0] + "\");join($arr$, \"\");"
 break;
 case 2: case 6:
 this.$ = $$[$0]
@@ -93,10 +93,10 @@ case 3:
 this.$ = $$[$0-1] + $$[$0]
 break;
 case 4:
-this.$ = "\");push($arr, " + $$[$0] + ");push($arr, \""
+this.$ = "\");push($arr$, " + $$[$0] + ");push($arr$, \""; 
 break;
 case 5:
-this.$ = "\");" + $$[$0] + ");push($arr, \""
+this.$ = "\");" + $$[$0] + ";push($arr$, \""; 
 break;
 }
 },
@@ -576,15 +576,15 @@ options: {},
 performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
 var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
-case 0:yy_.yytext = yy_.yytext.replace(/^s+/, '').replace(/[\n\r]+$/, '').replace(/\\~/g, ''); return 7;
+case 0:yy_.yytext = yy_.yytext.substr(2,yy_.yyleng-3).replace(/\\~/g, '~'); return 6;
 break;
-case 1:yy_.yytext = yy_.yytext.substr(2,yy_.yyleng-3).replace(/\\~/g, ''); return 6;
+case 1:yy_.yytext = yy_.yytext.replace(/^[\t ]*~/, '').replace(/~[\n\r]*$/, '').replace(/\\~/g, '~'); return 7;
 break;
 case 2:return 8;
 break;
 }
 },
-rules: [/^(?:\s+~(\\.|[^\\~])*~[\n\r]*)/,/^(?:~=(\\.|[^\\~])*~)/,/^(?:.+)/],
+rules: [/^(?:~=(\\.|[^\\~])*~)/,/^(?:[\t ]*~(\\.|[^\\~])*~[\n\r]*)/,/^(?:(\\.|[^\\~]))/],
 conditions: {"INITIAL":{"rules":[0,1,2],"inclusive":true}}
 });
 return lexer;

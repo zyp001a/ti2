@@ -32,19 +32,17 @@ b = [1, 2]
 */
 #if condition1 statement1 condition2 statement2 ... else_statement
 condition?statement:else_statement
-if(
+a?{
+}:a?{
+}:{
+}
 a=="first"; {print(1)}
 a=="second"; {print(2)}
 {print("else")}
 )
 a==1?print(1):print(2)
 
-#switch var case1 statement1 case2 statement2 default_statement
-switch(a
-"first", {print(1)}
-"second", {print(2)}
-{print("default")}
-)
+
 /*
  for each fe cfor
 */

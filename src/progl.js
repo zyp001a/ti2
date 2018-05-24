@@ -55,10 +55,11 @@ var its = {
 		this.fn(fs.close(fd));
 	},
 	addrget: function(x, k){
-		this.fn(newcpt([x, k], "Addr"));
+		this.fn(newcpt([x, k.toString()], "Addr"));
 	},
 	len: function(arr){
-		this.fn(hashlen(arr));
+		if(arr.length) this.fn(arr.length);
+		else this.fn(hashlen(arr));
 	},
 	strlen: function(str){
 		this.fn(str.length);
@@ -73,21 +74,13 @@ var its = {
 	execmain: function(main){
 		var env = this.env;
 		var fn = this.fn;		
-		execblock(main, env, fn);		
-//		var newcall = newcpt([main, argv], "Call");
-//		exec(newcall, this.env, this.fn);
+		execblock(main, env, fn);
 	},
-	uncall: function(x){
-		if(typeof x != "object") this.fn(x);
-		var type = x.__.type;
-		x.__.type = "Cpt";
-		var ncpt = newcpt([x, type], "Cpt");
-		this.fn(ncpt);
+	getp: function(cpt, k){
+		this.fn(cpt.__.fixed)
 	},
-	ununcall: function(x){
-		if(typeof x != "object") this.fn(x);
-		x[0].__.type = x[1];
-		this.fn(x);		
+	noexec: function(cpt){
+		this.fn(noexec(cpt));
 	},
 	id: function(s){
 		var fn = this.fn;
@@ -101,10 +94,15 @@ var its = {
 			fn(cpt);
 		})
 	},
-	get: function(ns, s, conf){
-		if(!conf) conf = {};
+	getp: function(x, str){
+		this.fn(x.__[str]);
+	},
+	type: function(x){
+		this.fn(gettype(x));
+	},
+	get: function(ns, s){
 		var fn = this.fn;
-		get(ns, s, conf, function(x){
+		get(ns, s, {notnew:1}, function(x){
 			fn(x)
 		})
 	},
@@ -121,6 +119,12 @@ var its = {
 	lt: function(l, r){
 		this.fn(l<r);
 	},
+	le: function(l, r){
+		this.fn(l<=r);		
+	},
+	gt: function(l, r){
+		this.fn(l>r);				
+	},
 	assign: function(r, l){
 		addrset(this.env, l, r);
 		this.fn(r);
@@ -132,10 +136,17 @@ var its = {
 		var env = this.env;
 		var fn = this.fn;
 		exec(stt, env, function(sttr){
-			endrec(env, end, inc, bl, fn);
+			endrec(env, end, inc, bl).then(fn);
 		});
 	},
-	if: function(){
+	if: function(x, bif, bels){
+		var env = this.env;
+		var fn = this.fn;
+		if(x){
+			exec(bif, env, fn);
+		}else{
+			exec(bels, env, fn);			
+		}
 	},
 	break: function(){
 	},
@@ -147,98 +158,134 @@ var its = {
 		return this.fn(x.toString());
 	}
 }
-function endrec(env, end, inc, bl, fn){
-	exec(end, env, function(endr){
-		if(!endr){
-			fn();
-			return;
+function copy(cpt){
+	var t = gettype(cpt);
+	if(cpt && cpt.__ && cpt.__.fixed) return cpt;
+	
+	var ncpt = utils.isarr(cpt)?[]:{};
+	switch(t){
+	case "String":
+	case "Undefined":
+	case "Number":
+	case "Env":
+	case "Brch":						
+		return cpt;
+	case "Addr":
+		ncpt[0] = cpt[0];
+		ncpt[1] = cpt[1];
+		break;
+	case "Block":
+		for(var k in cpt){
+			ncpt[k] = copy(cpt[k]);
 		}
-		exec(bl, env, function(blr){
-			//INT TODO
-			exec(inc, env, function(incr){
-				endrec(env, end, inc, bl, fn);
-			});
-		});
-	});	
+		break;
+	case "Call":
+		ncpt[0] = copy(cpt[0]);
+		ncpt[1] = copy(cpt[1]);
+		break;
+	case "Array":
+		for(var i in cpt){
+			ncpt[i] = copy(cpt[i]);
+		}
+		break;
+	default:
+		die(t);
+	}
+	ncpt.__ = {};		
+	Object.defineProperty(ncpt, '__', {
+		enumerable: false,
+		configurable: false
+	});
+	for(var k in cpt.__){
+		ncpt.__[k] = cpt.__[k]
+	}	
+	return ncpt;
+}
+function noexec(ocpt){
+	var cpt = copy(ocpt);
+	switch(gettype(cpt)){
+	case "Call":
+		cpt.__.noexec = 1;
+		noexec(cpt[0]);
+		noexec(cpt[1]);		
+		break;
+	case "Array":
+	case "Block":
+		cpt.__.noexec=1;
+		for(var i in cpt){
+			noexec(cpt[i]);
+		}
+		break;
+	}
+	return cpt;
+}
+async function endrec(env, end, inc, bl){
+	while(await utils.tp(exec, [end, env])){
+		const blr = await utils.tp(exec, [bl, env]);
+		//INT TODO
+		await utils.tp(exec, [inc, env]);
+	};	
 }
 function execcall(cpt, env, fn){
-  exec(cpt[0], env, function(funcp){
-		convert(funcp, "Function", env, function(func){
-//			log(func.__.name);					
-			//generate call stack [args/local, ]
-			var argdefall = func[1] || [];
-			var argdefs = argdefall[0] || [];//{key, type}
-			var rtndef = argdefall[1];
-			var args = cpt[1];
-			var $args = {};
-			var argtmp = [];
-			$args.$=$args;
-			utils.eachsync(Object.keys(args), function(i, fnsub){
-				var argdef = argdefs[i] || [];
-				var argp = args[i];
-				//if callable, keep arguments uncalled
-				utils.ifsync(argdef[1] != "Callable", function(fnsub2){
-					exec(argp, env, function(arg){
-						convert(arg, argdef[1], env, function(xarg){							
-							fnsub2([xarg])
-						})
-					})
-				}, function(xarg){
-					var carg;
-					if(xarg){
-						carg = xarg[0]
-					}else{
-						if(gettype(argp) == "Addr"){
-							carg = addrget(env, argp);
-						}else{
-							carg = argp;
-						}
-					}
+	convert(cpt[0], "Function", env, 1, function(func){
+//		log(cpt[0][1])
+		//generate call stack [args/local, ]
+		var argdefall = func[1] || [];
+		var argdefs = argdefall[0] || [];//{key, type}
+		var rtndef = argdefall[1];
+		var args = cpt[1];
+		var $args = {};
+		var argtmp = [];
+		$args.$=$args;
+		utils.eachsync(Object.keys(args), function(i, fnsub){
+			var argdef = argdefs[i] || [];
+			var argp = args[i];
+			//if callable, keep arguments uncalled
+			convert(argp, argdef[1], env, 1, function(carg){
 
-					$args[i] = carg;
-					argtmp[i] = carg;
-					if(argdef[0])
-						$args[argdef[0]] = carg;
-					fnsub();						
-				});
-			}, function(){
-				if(func.__.native){
-					func.__.native.apply({fn: fn, env: env}, argtmp);
-					return;
-				}
-				$args._brch = func[0].__.brch;
-				if($args._brch.__.level == env.$._brch.__.level + 1){
-					$args._parent = env.$;
-				}else{
-					$args._parent = env.$._parent;
-				}
-				push(env, $args);
-				if(func.__.tpl){
-					render(func[0][0], env, function(rtn){
-						pop(env);
-						fn(rtn)
-					});
-					return;
-				}
-				exec(func[0], env, function(rtn){
-					var rtype = gettype(rtn);
-					if(rtype == "Return"){
-						if(gettype(rtn[0]) == "Addr" && typeof rtn[0][0] != 'object'){
-							//stack
-							rtn = addrget(env, rtn[0]);
-						}else{
-							rtn = rtn[0];
-						}
-					}
-					//else if(rtype == "Ctrl"){//break continue, do within special funcs
-					//						}
-					//check rtn type TODO
+				$args[i] = carg;
+				argtmp[i] = carg;
+				if(argdef[0])
+					$args[argdef[0]] = carg;
+				fnsub();						
+			});
+		}, function(){
+			if(func.__.native){
+				func.__.native.apply({fn: fn, env: env}, argtmp);
+				return;
+			}
+			$args._brch = func[0].__.brch;
+			if($args._brch.__.level == env.$._brch.__.level + 1){
+				$args._parent = env.$;
+			}else{
+				$args._parent = env.$._parent;
+			}
+			push(env, $args);
+			if(func.__.tpl){
+				render(func[0][0], env, function(rtn){
 					pop(env);
-					fn(rtn);
+					fn(rtn)
 				});
+				return;
+			}
+			exec(func[0], env, function(rtn){
+				var rtype = gettype(rtn);
+				if(rtype == "Return"){
+					if(gettype(rtn[0]) == "Addr" && typeof rtn[0][0] != 'object'){
+						//stack
+						rtn = addrget(env, rtn[0]);
+					}else{
+						rtn = rtn[0];
+					}
+				}
+				//else if(rtype == "Ctrl"){//break continue, do within special funcs
+				//						}
+				//check rtn type TODO
+				pop(env);
+				fn(rtn);
 			});
 		});
-	});					
+	});
 }
 function newcpt(val, type, brch, name){
 	if(typeof val != "object") return val;
@@ -294,16 +341,52 @@ var rootbrch = newcpt({}, "Brch");
 rootbrch.__.path = "";
 rootbrch.__.level = 0;
 rootbrch.__.isroot = 1;
+rootbrch.__.fixed = 1;
 function progl2cpt(str, brch, fn){
 	var ast = parser.parse(str);
 	ast2cpt(ast, brch, function(cpt){
 		fn(cpt);
 	});
 }
+function cpt2str(cpt){
+	var t = gettype(cpt);
+	switch(t){
+	case "String":
+		return '"'+cpt.toString()+'"';		
+	case "Number":
+		return cpt.toString();
+	case "Undefined":
+		return "_";
+	case "Call":
+		var args = "";
+		for(var i in cpt[1]){
+			args += cpt2str(cpt[1][i]) + ",";
+		}
+		return cpt2str(cpt[0]) + "(" + args + ")";
+	case "Block":
+		var b = "";
+		for(var i in cpt){
+			args += cpt2str(cpt[i]) + "\n";
+		}
+		return "{" +b+"}"
+	case "Addr":
+		if(typeof cpt[0] != "object")
+			return cpt[1]
+		else
+			return cpt[0].__.path+"/"+cpt[1];
+	case "Cpt":
+		return "[" + "]";
+	case "Brch":
+		return "Brch"
+	case "Env":
+		return "Env"
+	default:
+		die(t)
+	}
+	
+}
 function logcpt(cpt){
-	console.log("Cpt:");
-	if(typeof cpt != "object") console.log(cpt);
-	else console.log(cpt), console.log(cpt.__)
+	log(cpt2str(cpt));
 }
 function block2arr(es, brch, fn){
 	var arr = [];
@@ -342,8 +425,8 @@ function ast2cpt(ast, brch, fn){
 		if(Object.getOwnPropertyDescriptor(brch, e)){
 			var ee = brch[e];
 			if(ee && ee.__ && ee.__.fixed)//is named function
-				return fn(newcpt([brch,e],"Addr"));
-			return fn(newcpt([0,e],"Addr"));
+				return fn(newcpt([brch,e], "Addr"));
+			return fn(newcpt([0,e], "Addr"));
 		}else if(Object.getOwnPropertyDescriptor(brch.__.brch, e)){
 			var ee = brch.__.brch[e];			
 			if(ee && ee.__ && ee.__.fixed)//is named function
@@ -369,18 +452,11 @@ function ast2cpt(ast, brch, fn){
 		brch[e] = undefined;//set lexical scope
 		fn(newcpt([0, e], "Addr"));//addr stack
 		break;	
-	case "addr"://absolute get
-		ast2cpt(e[0], brch, function(cpt){
-			ast2cpt(e[1], brch, function(key){
-				fn(newcpt([cpt, key],"Addr"));
-			});
-		})
-		break;
 	case "tpl":
 		var newbrch = newcpt({}, "Brch", brch);
 		var toeval = tpl.parse(e);
 		var tpl0 = newcpt([toeval], "Cpt", newbrch);		
-		log(toeval);
+//		log(toeval);
 		var tplfunc = newcpt([tpl0, [[]]], "Function", brch);
 		tplfunc.__.tpl = 1;		
 		fn(tplfunc);
@@ -398,23 +474,6 @@ function ast2cpt(ast, brch, fn){
 			fn(func);
 		});
 		break;
-	case "class":
-		var newbrch = newcpt({}, "Brch", brch, e[2]?"_"+e[2]:undefined);
-		block2arr(e[0], newbrch, function(ee){
-		})
-		ast2cpt(['block',e[0]], newbrch, function(block){
-			var cls = newcpt([block], "Class", brch, e[3]);
-			setrels(cls, e[1], function(){
-				fn(cls)
-			});
-		});	
-		break;
-	case "new":
-		var newbrch = newcpt({}, "Brch", brch);		
-		ast2cpt(['block', e], newbrch, function(block){
-			fn(newcpt([block], "New"));
-		});
-		break;
 	case "block":
 		block2arr(e, brch, function(ee){
 			fn(newcpt(ee, "Block", brch));
@@ -423,16 +482,15 @@ function ast2cpt(ast, brch, fn){
 	case "call":
 		ast2cpt(e[0], brch, function(func){
 			block2arr(e[1], brch, function(args){
+				newcpt(args, "Array", brch);
 				return fn(newcpt([func, args], "Call"));
 			});
 		});
 		break;
-	case "cpt":
+	case "arr":
 		block2arr(e, brch, function(cpt){
-			newcpt(cpt, "Cpt", brch);
-			setrels(cpt, ast[2], function(){
-				fn(cpt);
-			})
+			newcpt(cpt, "Array", brch);
+			fn(cpt);
 		});
 		break;
 	case "brch":
@@ -444,9 +502,6 @@ function ast2cpt(ast, brch, fn){
 	default:
 		die("wrong ast", ast);
 	}
-}
-function cpt2progl(val, fn){
-	
 }
 var intypes = {
 	"Undefined":1,
@@ -470,6 +525,8 @@ var intypes = {
 }
 function gettype(cpt, internal){
 	switch(typeof cpt){
+	case "boolean":
+		return "Number";
 	case "undefined":
 		return "Undefined"
 	case "number":
@@ -477,20 +534,37 @@ function gettype(cpt, internal){
 	case "string":
 		return "String"
 	case "object":
+		if(!cpt.__) die("not cpt: ", cpt)
 		return cpt.__.type;
 	default:
 		die("wrong cpt type", cpt);
 	}
 }
 
-function convert(cpt, type, env, fn){
+function convert(cpt, type, env, flag, fn){
 	var otype = gettype(cpt);
-	if(otype == type) return fn(cpt);	
-	if(otype == "Addr"){
-		return convert(addrget(env, cpt), type, env, fn);		
+	if(cpt && cpt.__ && cpt.__.noexec) return fn(cpt);
+	if(otype == "Addr" && type != "Addr"){
+		return convert(addrget(env, cpt), type, env, 0, fn);		
+	}	
+	if(type == "Callable"){
+		if(otype == "Addr"){
+			fn(addrget(env, cpt));
+		}else{
+			fn(cpt);
+		}
+		return;
 	}
-	if(!type) return fn(cpt);		
-	die(otype +" is not "+type, cpt);
+	if(flag){
+		exec(cpt, env, function(ncpt){
+			convert(ncpt, type, env, 0, fn);
+		});
+		return;		
+	}
+	if(otype == type || !type){
+		return fn(cpt);
+	}
+	die(otype +" is not "+type, cpt, cpt);		
 }
 
 
@@ -530,6 +604,7 @@ function get(brch, key, config, fn){
 	if(key == undefined){
 		key = hashlen(brch).toString();
 	}
+	key = key.toString();
 	if(key.match("/")){
 		//absolute path
 		var keys = key.split("/");
@@ -582,12 +657,12 @@ function get(brch, key, config, fn){
 	});
 }
 function render(str, env, fn){
-	newenv(function(nenv){
+	
+	newenv(env.initbrch, undefined, function(nenv){
 		for(var k in env.$){
 			nenv.$["_"+k] = env.$[k];
 		}
 		_eval(str, nenv, function(rtn){
-			log(rtn)
 			fn(rtn);
 		});
 	});
@@ -621,11 +696,13 @@ function exec(cpt, env, fn){
 	var type = gettype(cpt);
 	switch(type){
 	case "Block":
+		if(cpt.__.noexec) return fn(cpt);
 		execblock(cpt, env, function(rtn){
 			fn(rtn)
 		});			
 		break;
 	case "Call":
+		if(cpt.__.noexec) return fn(cpt);		
 		execcall(cpt, env, function(rtn){
 			fn(rtn)
 		});
@@ -636,18 +713,18 @@ function exec(cpt, env, fn){
 	}
 }
 
-function newenv(lang, fn){
-	if(!fn){ fn = lang; lang = undefined}
-	get(_do, lang, {local:1, notaddr: 1}, function(lbrch){
+function newenv(brch, lang, fn){
+	get(brch, lang, {local:1, notaddr: 1}, function(lbrch){
 		if(!lbrch) lbrch = _do;
 		var env = newcpt({
 			$: {},
 			stack: [],
+			initbrch: lbrch
 		}, "Env", lbrch);
 		env.$._brch = lbrch;
 		env.$.$ = env.$;
-		get(lbrch, "execMain", {notaddr: 1, notnew: 1}, function(cpt){
-			env.execMain = cpt;
+		get(lbrch, "execmain", {notaddr: 1, notnew: 1}, function(cpt){
+			env.execmain = cpt;
 			fn(env);
 		});
 	});
@@ -681,10 +758,10 @@ function run(str, lang, argv, fn){
 	}
 	init(function(brch){
 		var argvcpt = newcpt(argv, "Cpt", _do, "argv");
-		argvcpt.__.fixed = 1		
-		newenv(lang, function(env){
+		argvcpt.__.fixed = 1
+		newenv(_do, lang, function(env){
 			progl2cpt("{"+str+"\n}", env.__.brch, function(maincpt){				
-				var newcall = newcpt([env.execMain, [maincpt]], "Call");
+				var newcall = newcpt([env.execmain, newcpt([maincpt], "Array", env.__.brch)], "Call");
 				exec(newcall, env, function(rtn){
 					fn(rtn);
 				})
