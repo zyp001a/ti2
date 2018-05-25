@@ -83,7 +83,7 @@ var grammar = {
     ["left", "*", "/", "%"],
     ["right", "&", "|", "@"],
     ["right", "!"],
-		["left", ".", ":"],
+		["right", ".", ":"],
     ["right", "?"],				
 		["left", ","]
 	],
@@ -130,17 +130,20 @@ var grammar = {
 			["Relstr", "$$ = $1.split(/\\s+/)"]
 		],
 		"Addrget": [
-			["Addr . KeyCall", "$$ = [$1, $3]"],
-			["String . KeyCall", "$$ = [['obj', 'String', $1], $3]"],
-			["Addrget . KeyCall", "$$ = [['call', [['id', 'addrget'], $1]], $3]"],
-			["( Raw ) . KeyCall", "$$ = [$2, $5]"],				
+			["Addr . Id", "$$ = [$1, ['obj', 'String', $3]]"],
+			["Addr [ Raw ]", "$$ = [$1, $3]"],
+			["String [ Raw ]", "$$ = [['obj', 'String', $1], $3]"],
+			["Addrget [ Raw ]", "$$ = [['call', [['id', 'addrget'], $1]], $3]"],
+			["( Raw ) [ Raw ]", "$$ = [$2, $5]"],				
 		],
+		/*
 		"KeyCall": [
 			["Id", "$$ = ['obj', 'String', $1]"],
 			["String", "$$ = ['obj', 'String', $1]"],
 			["Number", "$$ = ['obj', 'String', $1]"],		
 			["( Raw )", "$$ = $2"]
 		],
+*/
 		"Block": [
 			["{ }", "$$= []"],
 			["{ Raws }", "$$ = $2"],
