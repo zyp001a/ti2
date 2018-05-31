@@ -167,6 +167,16 @@ var its = {
 	return: function(rtn){
 		this.fn(newcpt([rtn], "Return"));
 	},
+	def: function(x, t){
+		if(x[0][0] == "argdef") die("defined in argdef: "+x[1])
+		x[0][1] = t;
+	},
+	break: function(){
+		this.fn(newcpt([1], "Ctrl"));
+	},
+	continue: function(){
+		this.fn(newcpt([0], "Ctrl"));				
+	},	
 	each: function(k, v, c, bl){
 		eachsub(this.env, k, v, c, bl).then(this.fn);		
 	},
@@ -181,14 +191,15 @@ var its = {
 		var env = this.env;
 		var fn = this.fn;
 		if(x){
-			exec(bif, env, fn);
+			exec(bif, env, function(rtn){
+				fn(rtn)
+			});
 		}else{
 			exec(bels, env, fn);			
 		}
 	},
-	break: function(){
-	},
-	continue: function(){
+	int: function(x){
+		this.fn(parseInt(x))
 	},
 	string: function(x){
 		if(x == undefined) return this.fn("");
@@ -280,9 +291,14 @@ function noexec(cpt){
 }
 async function endrec(env, end, inc, bl){
 	while(await utils.tp(exec, [end, env])){
-		const blr = await utils.tp(exec, [bl, env]);
-		//INT TODO
+		let blr = await utils.tp(exec, [bl, env]);
 		await utils.tp(exec, [inc, env]);
+		if(gettype(blr) == "Return")
+			return blr;
+		if(gettype(blr) == "Ctrl"){
+			if(blr[0]) break;
+			else continue;
+		}		
 	};	
 }
 async function eachsub(env, k, v, c, bl){
@@ -290,7 +306,12 @@ async function eachsub(env, k, v, c, bl){
 		addrset(env, k, key)
 		addrset(env, v, c[key])		
 		const blr = await utils.tp(exec, [bl, env]);
-		//INT TODO		
+		if(gettype(blr) == "Return")
+			return blr;
+		if(gettype(blr) == "Ctrl"){
+			if(blr[0]) break
+			else continue;
+		}		
 	}
 }
 var currfunc;
@@ -343,16 +364,8 @@ function execcall(cpt, env, fn){
 			exec(func[0], env, function(rtn){
 				var rtype = gettype(rtn);
 				if(rtype == "Return"){
-//					if(gettype(rtn[0]) == "Addr" && typeof rtn[0][0] != 'object'){
-						//stack
-//						rtn = addrget(env, rtn[0]);
-//					}else{
 					rtn = rtn[0];
-//					}
 				}
-				//else if(rtype == "Ctrl"){//break continue, do within special funcs
-				//						}
-				//check rtn type TODO
 				pop(env);
 				fn(rtn);
 			});
@@ -381,41 +394,50 @@ function newcpt(val, type, brch, name){
 			c.path = name;
 		c.level = brch.__.level + 1;//for closure			
 	}
-	
+	c.indent = 0;
 	c.brch = brch;
 	c.name = name;
 	return val;
 }
 function addrdel(env, addr){
-	if(typeof addr[0] == "object")
-		delete addr[0][addr[1]];
-	else if(addr[0]){
-		delete env.$._parent[addr[1]];//this
-	}else
-		delete env.$[addr[1]];	
+	if(addr[2] != undefined){
+		if(addr[2])
+			delete env.$._parent[addr[1]];//this
+		else
+			delete env.$[addr[1]];
+		return;
+	}
+	delete addr[0][addr[1]];
 }
 function addrget(env, addr){
-
-	if(typeof addr[0] == "object")
-		return addr[0][addr[1]];
-	else if(addr[0]){
-		return env.$._parent[addr[1]];//this
-	}else
-		return env.$[addr[1]];
+	if(addr[2] != undefined){
+		if(addr[2])
+			return env.$._parent[addr[1]];//this
+		else
+			return env.$[addr[1]];
+		return;
+	}
+	return addr[0][addr[1]];	
 }
 function addrset(env, addr, val){
 	var h;
-	if(typeof addr[0] == "object")
-		h = addr[0];
-	else if(addr[0])
-		h = env.$._parent;
-	else
-		h = env.$;
+	if(addr[2] != undefined){
+		if(addr[2])
+			h = env.$._parent
+		else
+			h = env.$
+	}else{
+		h	= addr[0];
+	}
 	if(addr[1].match(/^\d+$/)){
 		var i = parseInt(addr[1]);
 		if(i >= hashlen(h)){
 			h.__.length = i+1;
 		}
+	}
+	if(addr[3]){
+		var t = gettype(val);		
+		addr[3][1] = t;
 	}
 	h[addr[1]] = val;
 	return val;
@@ -516,12 +538,12 @@ function ast2cpt(ast, brch, fn){
 			var ee = brch[e];
 			if(ee && ee.__ && ee.__.fixed)//is named function
 				return fn(newcpt([brch,e], "Addr"));
-			return fn(newcpt([0,e], "Addr"));
+			return fn(newcpt([brch, e, 0], "Addr"));
 		}else if(Object.getOwnPropertyDescriptor(brch.__.brch, e)){
 			var ee = brch.__.brch[e];			
 			if(ee && ee.__ && ee.__.fixed)//is named function
-				return fn(newcpt([brch.__.brch,e],"Addr"));			
-			return fn(newcpt([1,e],"Addr"));			
+				return fn(newcpt([brch.__.brch,e], "Addr"));			
+			return fn(newcpt([brch.__.brch, e, 1],"Addr"));			
 		}else{
 			get(brch, e, {notnew: 1}, function(addr){
 				if(addr){
@@ -530,8 +552,8 @@ function ast2cpt(ast, brch, fn){
 					}
 					fn(addr);
 				}else{					
-					brch[e] = "local"//set lexical scope					
-					fn(newcpt([0,e],"Addr"));	
+					brch[e] = newcpt(["local"], "Array");//set lexical scope					
+					fn(newcpt([brch, e, 0],"Addr"));
 				}
 			});
 		}
@@ -542,8 +564,9 @@ function ast2cpt(ast, brch, fn){
 		});		
 		break;
 	case "reg":
-		brch[e] = undefined;//set lexical scope
-		fn(newcpt([0, e], "Addr"));//addr stack
+		if(!brch[e])
+			brch[e] = newcpt(["local"], "Array");//set lexical scope
+		fn(newcpt([brch, e, 0], "Addr"));//addr stack
 		break;	
 	case "tpl":
 		var newbrch = newcpt({}, "Brch", brch);
@@ -556,8 +579,9 @@ function ast2cpt(ast, brch, fn){
 		break;		
 	case "function":
 		var newbrch = newcpt({}, "Brch", brch, e[3]?"_"+e[3]:undefined);
+		newbrch.__.indent = brch.__.indent + 1;
 		var func = newcpt([], "Function", brch, e[3]);
-//		newbrch.this = func;		
+//		newbrch.this = func;
 		if(e[3])
 			func.__.fixed = 1;
 		if(e[1]){
@@ -565,7 +589,7 @@ function ast2cpt(ast, brch, fn){
 			var x = func[1][0];
 			newcpt(x, "Array");
 			for(var i in x){
-				newbrch[x[i][0]] = "argdef"
+				newbrch[x[i][0]] = newcpt(["argdef", x[i][1]], "Array")
 				newcpt(x[i], "Array");
 			}
 		}
@@ -653,6 +677,8 @@ function convert(cpt, type, env, flag, fn){
 		return;
 	}	
 	if(type == "Callable"){
+		if(typeof cpt == "object" && typeof(cpt.__.brch) == "object")
+			cpt.__.indent = cpt.__.brch.__.indent + 1;
 		if(otype == "Addr"){
 			exec(cpt, env, fn);
 		}else{
