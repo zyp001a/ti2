@@ -1,3 +1,4 @@
+
 1. Grammar
 Number: 1 2 123
 String: "abc" 'ddd'
@@ -46,7 +47,7 @@ func_Class
 
 ## pipeline
 read mainfunc
-execMain
+execmain
 
 
 # soul

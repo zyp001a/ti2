@@ -22,10 +22,19 @@ case "run":
 	});
 	break;
 case "gen":
-	var	lang = process.argv[4];
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
-	var brchstr = lang?"_gen/_"+lang:"_gen";
+	var brchstr = "_gen";
+	var argv = [tfile]
+	progl.run(str, brchstr, argv, function(rtn){
+		console.log("FINAL");
+		console.log(rtn);
+	});	
+	break;
+case "js":
+	var	tfile = process.argv[3];	
+	var str = fs.readFileSync(tfile).toString();
+	var brchstr = "_gen/_nodejs"
 	var argv = [tfile]
 	progl.run(str, brchstr, argv, function(rtn){
 		console.log("FINAL");

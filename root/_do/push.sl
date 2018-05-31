@@ -1,3 +1,3 @@
 =>(arr, e){
- ~arr[string(len(arr))] = e;
+ ~arr[len(arr)] = e;
 }

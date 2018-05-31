@@ -86,6 +86,15 @@ function mkdirpSync (p, opts, made) {
   return made;
 }
 //each([0,1,2],function(el,cb){}, function(err){})
+function eachsync2(arr, fneach, fn){
+	_sub(arr, fneach).then(fn);
+}
+async function _sub(arr, fneach){
+	for(let i =0;i<arr.length;i++){
+		let x = await tp(fneach, [arr[i]]);
+		if(x) return x;
+	}
+}
 function eachsync(arr, fneach, fn){
 	eachSub(arr, fneach, fn, 0);
 }
@@ -229,7 +238,7 @@ function isarr(obj){
 }
 module.exports = {
 	mkdirp: mkdirpSync,
-	eachsync: eachsync,
+	eachsync: eachsync2,
 	ifsync: ifsync,
 	nsync: nsync,
 	freqadd: freqadd,
