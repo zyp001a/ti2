@@ -98,7 +98,7 @@ var its = {
 	},
 	require: function(){
 	},
-	execmain: function(main){
+	main: function(main){
 		var env = this.env;
 		var fn = this.fn;		
 		execblock(main, env, fn);
@@ -222,6 +222,8 @@ function copy(cpt){
 	case "Addr":
 		ncpt[0] = cpt[0];
 		ncpt[1] = cpt[1];
+		ncpt[2] = cpt[2];
+		ncpt[3] = cpt[3];		
 		break;
 	case "Block":
 		for(var k in cpt){
@@ -400,6 +402,9 @@ function newcpt(val, type, brch, name){
 	return val;
 }
 function addrdel(env, addr){
+	if(addr[3] != undefined){
+		delete addr[3][addr[1]];
+	}	
 	if(addr[2] != undefined){
 		if(addr[2])
 			delete env.$._parent[addr[1]];//this
@@ -410,6 +415,9 @@ function addrdel(env, addr){
 	delete addr[0][addr[1]];
 }
 function addrget(env, addr){
+	if(addr[3] != undefined){
+		return addr[3][addr[1]];
+	}
 	if(addr[2] != undefined){
 		if(addr[2])
 			return env.$._parent[addr[1]];//this
@@ -419,8 +427,19 @@ function addrget(env, addr){
 	}
 	return addr[0][addr[1]];	
 }
+function addrpreload(env, addr){
+	if(addr[3] != undefined) return;
+	if(addr[2] != undefined){
+		if(addr[2])
+			addr[3] = env.$._parent
+		else
+			addr[3] = env.$		
+	}
+}
 function addrset(env, addr, val){
 	var h;
+	if(addr[3] != undefined)
+		h = addr[3]
 	if(addr[2] != undefined){
 		if(addr[2])
 			h = env.$._parent
@@ -874,13 +893,12 @@ function exec(cpt, env, fn){
 			fn(rtn)
 		});		
 		break;
-		/*
 	case "Addr":
 		if(cpt.__.noexec) return fn(cpt);
-		var rtn = addrget(env, cpt);
-		fn(rtn);
+		if(cpt[3]) return fn(cpt);
+		addrpreload(env, cpt);
+		fn(cpt);
 		break;
-*/
 	default:
 		fn(cpt);
 		return;
@@ -897,8 +915,8 @@ function newenv(brch, lang, fn){
 		}, "Env", lbrch);
 		env.$._brch = lbrch;
 		env.$.$ = env.$;
-		get(lbrch, "execmain", {notaddr: 1, notnew: 1}, function(cpt){
-			env.execmain = cpt;
+		get(lbrch, "main", {notaddr: 1, notnew: 1}, function(cpt){
+			env.main = cpt;
 			fn(env);
 		});
 	});
@@ -935,7 +953,7 @@ function run(str, lang, argv, fn){
 		argvcpt.__.fixed = 1;
 		newenv(_do, lang, function(env){
 			progl2cpt("{"+str+"\n}", env.__.brch, function(maincpt){				
-				var newcall = newcpt([env.execmain, newcpt([maincpt], "Array", env.__.brch)], "Call");
+				var newcall = newcpt([env.main, newcpt([maincpt], "Array", env.__.brch)], "Call");
 				exec(newcall, env, function(rtn){
 					fn(rtn);
 				})

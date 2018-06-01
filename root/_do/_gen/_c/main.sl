@@ -1,9 +1,9 @@
 =>{
  global.indent = "  ";
- global.brch = idglobal("_out/_nodejs");
- global.postfix = ".js";
+ global.brch = idglobal("_out/_c");
+ global.postfix = ".c";
  global.varprefix = "_"; 
- $x = noexec(main)
+ $x = noexec(mainblock)
  $str =  gen(x);
  $str = gendeps() + $str;
  print(str)

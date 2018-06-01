@@ -1,0 +1,2 @@
+=>(mainblock:Callable){
+}

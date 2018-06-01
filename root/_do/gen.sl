@@ -1,4 +1,4 @@
-=>(c){
- $x = get(global.brch, type(c));
- ~x?x(c):""
+=>(){
+ $x = get(global.brch, type($0));
+ ~x?call(x, $$):""
 }
