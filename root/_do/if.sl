@@ -1,2 +1,2 @@
-=>(cond, bif:Callable, bels:Callable){
+@=>(cond, bif:Callable, bels:Callable){
 }

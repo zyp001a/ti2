@@ -5,6 +5,8 @@ var parser = require("./progl-parser");
 var tpl = require("./tpl-parser");
 var db = require("./db");
 var fs = require("./fs");
+var currfunc;
+var currfile;
 function pop(env){
 	env.$ = env.stack.pop();
 }
@@ -40,7 +42,7 @@ function cacheadd(brch, key){
 var _do;
 var its = {
 	stat: function(fname){
-		this.fn(fs.state(fname));
+		this.fn(fs.stat(fname));
 	},
 	write: function(fd, x){
 		this.fn(fs.write(fd, x));
@@ -89,14 +91,26 @@ var its = {
 		addrdel(this.env, addr);
 		this.fn();
 	},
+	makecall: function(k, arg){//AGAIN
+		var fn = this.fn;
+		var env = this.env;
+		get(env.__.brch, k, {}, function(addr){
+			var addrx = copy(addr)
+			var newarg = newcpt([], "Array");
+			utils.eachsync(arg, function(x, fnsub){
+				convert(x, "", env, 0, function(xx){
+					hashpush(newarg, xx)
+					fnsub();
+				});
+			}, function(){
+				var x = noexec(newcpt([addrx, newarg], "Call"));
+				fn(x)
+			})
+		})
+	},
 	call: function(f, argv){
 		var x = newcpt([f, argv], "Call");
 		execcall(x, this.env, this.fn);
-	},
-	render: function(tpl, envf, envt){
-		this.fn(render(tpl, envf, envt))
-	},
-	require: function(){
 	},
 	main: function(main){
 		var env = this.env;
@@ -105,6 +119,10 @@ var its = {
 	},
 	getp: function(cpt, k){
 		this.fn(cpt.__[k])
+	},
+	setp: function(cpt, k, v){
+		cpt.__[k] = v;
+		this.fn(v)
 	},
 	noexec: function(cpt){
 		var x = noexec(copy(cpt));
@@ -131,10 +149,8 @@ var its = {
 			fn(x)
 		})
 	},
-	exec: function(){
-		
-	},
-	eval: function(){
+	eval: function(str){
+		_eval(str, this.env, this.fn);
 	},
 	plus: function(l, r){
 		this.fn(l+r);
@@ -180,11 +196,16 @@ var its = {
 	each: function(k, v, c, bl){
 		eachsub(this.env, k, v, c, bl).then(this.fn);		
 	},
+	while: function(end, bl){
+		var env = this.env;
+		var fn = this.fn;
+		endwhile(env, end, bl).then(fn);
+	},
 	for: function(stt, end, inc, bl){
 		var env = this.env;
 		var fn = this.fn;
 		exec(stt, env, function(sttr){
-			endrec(env, end, inc, bl).then(fn);
+			endfor(env, end, inc, bl).then(fn);
 		});
 	},
 	if: function(x, bif, bels){
@@ -216,6 +237,7 @@ function copy(cpt){
 	case "String":
 	case "Undefined":
 	case "Number":
+	case "Int":		
 	case "Env":
 	case "Brch":			
 		return cpt;
@@ -277,6 +299,7 @@ function noexec(cpt){
 		break;
 	case "Addr":
 		cpt.__.noexec=1;
+		
 		break;
 	case "Function":
 //		cpt = copy(cpt);
@@ -285,13 +308,25 @@ function noexec(cpt){
 	case "String":
 	case "Undefined":
 	case "Number":
+	case "Int":		
 		break;
 	default:
 		die(t)
 	}
 	return cpt;
 }
-async function endrec(env, end, inc, bl){
+async function endwhile(env, end, bl){
+	while(await utils.tp(exec, [end, env])){
+		let blr = await utils.tp(exec, [bl, env]);
+		if(gettype(blr) == "Return")
+			return blr;
+		if(gettype(blr) == "Ctrl"){
+			if(blr[0]) break;
+			else continue;
+		}		
+	};
+}
+async function endfor(env, end, inc, bl){
 	while(await utils.tp(exec, [end, env])){
 		let blr = await utils.tp(exec, [bl, env]);
 		await utils.tp(exec, [inc, env]);
@@ -316,7 +351,7 @@ async function eachsub(env, k, v, c, bl){
 		}		
 	}
 }
-var currfunc;
+
 function execcall(cpt, env, fn){
 	currfunc = cpt[0][1];
 	
@@ -368,8 +403,10 @@ function execcall(cpt, env, fn){
 				if(rtype == "Return"){
 					rtn = rtn[0];
 				}
-				pop(env);
-				fn(rtn);
+				convert(rtn, rtndef, env, 0, function(rtnf){
+					pop(env);
+					fn(rtnf);
+				})
 			});
 		});
 	});
@@ -478,6 +515,7 @@ function cpt2str(cpt){
 	case "String":
 		return '"'+cpt.toString()+'"';		
 	case "Number":
+	case "Int":		
 		return cpt.toString();
 	case "Undefined":
 		return "_";
@@ -589,13 +627,25 @@ function ast2cpt(ast, brch, fn){
 		break;	
 	case "tpl":
 		var newbrch = newcpt({}, "Brch", brch);
-		var toeval = tpl.parse(e);
+		try{
+			var toeval = tpl.parse(e);
+		}catch(err){
+			logcpt(currfile)
+			log(e)			
+			die(err)
+		}
 		var tpl0 = newcpt([toeval], "Tpl", newbrch);		
 //		log(toeval);
 		var tplfunc = newcpt([tpl0, [[]]], "Function", brch);
 		tplfunc.__.tpl = 1;		
 		fn(tplfunc);
-		break;		
+		break;
+	case "native":
+		ast2cpt(e, brch, function(func){
+			func.__.native = 1
+			fn(func)
+		});
+		break;
 	case "function":
 		var newbrch = newcpt({}, "Brch", brch, e[3]?"_"+e[3]:undefined);
 		newbrch.__.indent = brch.__.indent + 1;
@@ -653,6 +703,7 @@ function ast2cpt(ast, brch, fn){
 var intypes = {
 	"Undefined":1,
 	"Number": 1,
+	"Int": 1,	
 	"String": 1,
 	
 	"Brch": 1,
@@ -672,7 +723,7 @@ var intypes = {
 function gettype(cpt){
 	switch(typeof cpt){
 	case "boolean":
-		return "Number";
+		return "Int";
 	case "undefined":
 		return "Undefined"
 	case "number":
@@ -690,6 +741,7 @@ function gettype(cpt){
 var currfunc;
 function convert(cpt, type, env, flag, fn){
 	var otype = gettype(cpt);
+	if(type == "Int") type = "Number";
 	if(cpt && cpt.__ && cpt.__.noexec) return fn(cpt)
 	if(otype == "Addr" && type != "Addr"){
 		convert(addrget(env, cpt), type, env, 0, fn);
@@ -698,11 +750,11 @@ function convert(cpt, type, env, flag, fn){
 	if(type == "Callable"){
 		if(typeof cpt == "object" && typeof(cpt.__.brch) == "object")
 			cpt.__.indent = cpt.__.brch.__.indent + 1;
-		if(otype == "Addr"){
-			exec(cpt, env, fn);
-		}else{
-			fn(cpt);
-		}
+//		if(otype == "Addr"){
+//			exec(cpt, env, fn);
+//		}else{
+		fn(cpt);
+//		}
 		return;
 	}
 	if(type == "Addr" && otype == "Addr"){
@@ -722,7 +774,7 @@ function convert(cpt, type, env, flag, fn){
 		var x = env.stack[i];
 		log(x._func)
 	}
-	die(otype +" is not "+type, cpt, cpt);		
+	die(otype +" is not "+type, cpt);		
 }
 
 
@@ -777,6 +829,7 @@ function get(brch, key, config, fn){
 		return getfinal(brch, key, config, fn);
 	}
 	utils.ifsync(db, function(fnsub){
+		currfile = brch.__.path+"/"+key;
 		db.get(brch.__.path+"/"+key, function(str){
 			if(str){
 				progl2cpt(str, brch, function(cpt){
@@ -786,6 +839,9 @@ function get(brch, key, config, fn){
 						c.name = key;
 						c.path = brch.__.path + "/" + key;
 						c.fixed = 1;
+						if(c.native){
+							c.native = its[key];
+						}
 						if(brch.__.isroot) return fnsub2()
 						get(brch.__.brch, key, {notaddr: 1, notnew:1}, function(cptpre){
 							if(cptpre == undefined) return fnsub2()
@@ -906,7 +962,7 @@ function exec(cpt, env, fn){
 }
 
 function newenv(brch, lang, fn){
-	get(brch, lang, {local:1, notaddr: 1}, function(lbrch){
+	get(brch, lang, {local:1 , notaddr: 1}, function(lbrch){
 		if(!lbrch) lbrch = _do;
 		var env = newcpt({
 			$: newcpt({}, "Brch"),
@@ -921,13 +977,14 @@ function newenv(brch, lang, fn){
 		});
 	});
 }
+/*
 function init(fn){
 	if(_do) fn()
 	//load boot and native functions
 	get(rootbrch, "_do", {local:1, notaddr:1}, function(brch){
 		_do = brch;
 		utils.eachsync(Object.keys(its), function(k, fnsub){
-			get(brch, k, {local:1, notaddr:1}, function(func){
+			get(brch, k, {local:1, notaddr:1, impl:1}, function(func){
 				func.__.native = its[k]
 				fnsub()
 			});
@@ -936,6 +993,7 @@ function init(fn){
 		})
 	});
 }
+*/
 function _eval(str, env, fn){
 	progl2cpt("{"+str+"}", env.$._brch, function(cpt){
 		execblock(cpt, env, function(rtn){
@@ -948,11 +1006,12 @@ function run(str, lang, argv, fn){
 		fn = lang;
 		lang = undefined;
 	}
-	init(function(brch){
+	get(rootbrch, "_do", {local:1, notaddr:1}, function(brch){
+		_do = brch;
 		var argvcpt = newcpt(argv, "Array", _do, "argv");
 		argvcpt.__.fixed = 1;
 		newenv(_do, lang, function(env){
-			progl2cpt("{"+str+"\n}", env.__.brch, function(maincpt){				
+			progl2cpt("{"+str+"\n}", env.__.brch, function(maincpt){
 				var newcall = newcpt([env.main, newcpt([maincpt], "Array", env.__.brch)], "Call");
 				exec(newcall, env, function(rtn){
 					fn(rtn);

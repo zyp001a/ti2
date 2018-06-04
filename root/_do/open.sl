@@ -1,2 +1,2 @@
-=>(file: String, mode){
+@=>(file: String, mode){
 }

@@ -1,2 +1,2 @@
-=>(mainblock:Callable){
+@=>(mainblock:Callable){
 }

@@ -1,2 +1,2 @@
-=>(x:Callable){
+@=>(x:Callable){
 }

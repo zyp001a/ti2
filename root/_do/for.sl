@@ -1,2 +1,2 @@
-=>(stt:Callable, end:Callable, step:Callable, b:Callable){
+@=>(stt:Callable, end:Callable, step:Callable, b:Callable){
 }

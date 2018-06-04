@@ -26,8 +26,10 @@ var grammar = {
 			["{letter}({letter}|{digit}|\\$)*", "return 'Id'"],
 			["\\$({letter}|{digit}|\\$)*",
 			 "yytext = yytext.substr(1);return 'Reg'"],
-      ["\\b{int}{frac}?{exp}?\\b", "return 'Number';"],//TODO bignumber
-      ["\\b0[xX][a-zA-Z0-9]+\\b", "return 'Number';"],
+//TODO bignumber			
+      ["\\b{int}\\b", "return 'Int';"],			
+      ["\\b{int}{frac}?{exp}?\\b", "return 'Number';"],
+      ["\\b0[xX][a-zA-Z0-9]+\\b", "return 'Int';"],
       ["\\.", "return '.'"],
 			["\\=\\>", "return '=>'"],			
       ["\\(", "return '('"],
@@ -73,8 +75,8 @@ var grammar = {
 		["right", "~"],
 		["right", "=>"],
 		["left", ","],
+    ["right", "?", ":"],				
     ["right", "=", "+=", "-=", "*=", "/="],
-    ["right", "?", ":"],		
     ["left", "||"],		
     ["left", "&&"],		
 		["left", "==", "!="],
@@ -94,6 +96,7 @@ var grammar = {
 		],
 		"Raw": [			
 			["Number", "$$ = ['obj', 'Number', Number($1)]"],
+			["Int", "$$ = ['obj', 'Int', Number($1)]"],
 			["String", "$$ = ['obj', 'String', $1]"],
 			["Undefined", "$$ = ['obj', 'Undefined']"],
 			
@@ -102,6 +105,7 @@ var grammar = {
 			["Addr", "$$ = $1"],
 			
 			["Block", "$$ = ['block', $1]"],
+			["@ Function", "$$ = ['native', ['function', $2, []]]"],			
 			["Function", "$$ = ['function', $1, []]"],
 			["Rels Function", "$$ = ['function', $2, $1]"],			
 			["Rels Array", "$$ = ['arr', $2, $1]"],
@@ -132,17 +136,11 @@ var grammar = {
 			["Addr . Id", "$$ = [$1, ['obj', 'String', $3]]"],
 			["Addr [ Raw ]", "$$ = [$1, $3]"],
 			["String [ Raw ]", "$$ = [['obj', 'String', $1], $3]"],
+			["Addrget . Id", "$$ = [['call', [['id', 'addrget'], $1]], ['obj', 'String', $3]]"],
 			["Addrget [ Raw ]", "$$ = [['call', [['id', 'addrget'], $1]], $3]"],
-			["( Raw ) [ Raw ]", "$$ = [$2, $5]"],				
+			["( Raw ) . Id", "$$ = [$2, ['obj', 'String', $5]]"],			
+			["( Raw ) [ Raw ]", "$$ = [$2, $5]"],
 		],
-		/*
-		"KeyCall": [
-			["Id", "$$ = ['obj', 'String', $1]"],
-			["String", "$$ = ['obj', 'String', $1]"],
-			["Number", "$$ = ['obj', 'String', $1]"],		
-			["( Raw )", "$$ = $2"]
-		],
-*/
 		"Block": [
 			["{ }", "$$= []"],
 			["{ Raws }", "$$ = $2"],
@@ -157,7 +155,8 @@ var grammar = {
 		"KeyColon": [
 			["Id :", "$$ = $1"],
 			["String :", "$$ = $1"],
-			["Number :", "$$ = $1"]
+			["Number :", "$$ = $1"],
+			["Int :", "$$ = $1"],	
 		],
 		"Function": [
 			["FunctionBody", "$$= $1;"],
@@ -210,6 +209,7 @@ var grammar = {
 			["! Raw", "$$ = [['id', 'not'], [$2]]"],
 			["Raw ? Raw : Raw", "$$ = [['id', 'if'], [$1, $3, $5]]"],
 			["Raw ? Raw : ", "$$ = [['id', 'if'], [$1, $3]]"],			
+			["Raw ? Raw , : Raw", "$$ = [['id', 'if'], [$1, $3, $6]]"],
 			["Raw + Raw", "$$ = [['id', 'plus'], [$1, $3]]"],
 			["Raw - Raw", "$$ = [['id', 'minus'], [$1, $3]]"],
 			["Raw * Raw", "$$ = [['id', 'times'], [$1, $3]]"],

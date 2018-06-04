@@ -1,2 +1,2 @@
-=>(f:Function, a){
+@=>(f:Function, a){
 }

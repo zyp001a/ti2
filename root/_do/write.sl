@@ -1,2 +1,2 @@
-=>(fd, str){
+@=>(fd, str:String){
 }

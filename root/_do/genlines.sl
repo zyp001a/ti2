@@ -1,6 +1,6 @@
-=>(){
+=>(in){
  $str = "";
- each($x, $y, deps, {
+ each($x, $y, in, {
   str += $y + "\n";
  })
  ~str

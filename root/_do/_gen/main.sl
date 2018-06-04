@@ -4,7 +4,8 @@
  global.postfix = ".sl";
  global.varprefix = ""; 
  $x = noexec(mainblock)
- $str = sgen("main", [x]);
+ $mainstr = gen(x);
+ $str = sgen("main", [mainstr]);
  print(str)
  writefile(argv[0]+global.postfix, str)
 }
