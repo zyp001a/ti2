@@ -6,6 +6,5 @@
  $x = noexec(mainblock)
  $mainstr = gen(x);
  $str = sgen("main", [mainstr]);
- print(str)
  writefile(argv[0]+global.postfix, str)
 }

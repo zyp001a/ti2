@@ -4,6 +4,7 @@
  global.postfix = ".js";
  global.varprefix = "_";
  global.imports = <> 
+ global.eximports = <> 
  $x = noexec(mainblock)
  $mainstr = gen(x);
  $str = sgen("main", [mainstr]); 

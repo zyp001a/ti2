@@ -16,7 +16,7 @@ var grammar = {
 			["\\#[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 			["\\\/\\\/[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 			["`(\\\\.|[^\\\\`])*`", 
-			 "yytext = yytext.substr(1, yyleng-2).replace('\\\\`', '`'); return 'Tpl';"],
+			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\`/g, '`'); return 'Tpl';"],
 			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"",
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t';return n;}); return 'String';"], 
 			["\<[a-zA-Z0-9_\\\/\\s]*\>",
@@ -28,7 +28,7 @@ var grammar = {
 			 "yytext = yytext.substr(1);return 'Reg'"],
 //TODO bignumber			
       ["\\b{int}\\b", "return 'Int';"],			
-      ["\\b{int}{frac}?{exp}?\\b", "return 'Number';"],
+      ["\\b{int}{frac}{exp}?\\b", "return 'Number';"],
       ["\\b0[xX][a-zA-Z0-9]+\\b", "return 'Int';"],
       ["\\.", "return '.'"],
 			["\\=\\>", "return '=>'"],			
@@ -110,14 +110,10 @@ var grammar = {
 			["Rels Function", "$$ = ['function', $2, $1]"],			
 			["Rels Array", "$$ = ['arr', $2, $1]"],
 			["Array", "$$ = ['arr', $1, []]"],
-			["Rels", "$$ = ['brch', $1]"],
-//			["@ [ ]", "$$= ['hash']"],
-//			["Class", "$$ = ['class', $1]"],
-//			["New", "$$ = ['new', $1]"],
-			
+			["Rels", "$$ = ['dic', $1]"],
 			["Call", "$$ = ['call', $1]"],
 			["Addrget", "$$ = ['call', [['id', 'addrget'], $1]]"],			
-			["Assign", "$$ = ['call', [ ['id', 'assign'], $1 ]]"],
+			["Assign", "if($1[1][0] == 'call' && $1[1][1][0][1] == 'addrget'){ $$ = ['call', [ ['id', 'addrset'], [$1[1][1][1][0], $1[1][1][1][1], $1[0]] ]]} else {$$ = ['call', [ ['id', 'assign'], $1 ]]}"],//$1 = [right, ['call', ]
 			
 			["~ Raw", "$$ = ['call', [ ['id', 'return'], [$2] ]]"],
 			
@@ -170,8 +166,8 @@ var grammar = {
 		"Argdef": [
 			["( )", "$$= [[]]"],
 			["( Subdefs )", "$$= [$2]"],
-			["( ~ Id Subdefs )", "$$= [$4, $3]"],
-			["( ~ Id )", "$$= [[], $3]"],			
+			["( ~ Type Subdefs )", "$$= [$4, $3]"],
+			["( ~ Type )", "$$= [[], $3]"],			
 //			["Subdef", "$$=[$1]"]
 		],
     "Subdefs": [
@@ -180,7 +176,11 @@ var grammar = {
     ],
 		"Subdef": [
 			["Id", "$$ = [$1]"],
-			["KeyColon Id", "$$ = [$1, $2]"],
+			["KeyColon Type", "$$ = [$1, $2]"],
+		],
+		"Type": [
+			["Id", "$$ = $1"],
+			["Id Rels", "$$ = $1"],//TODO realtype
 		],
 		"Call": [
 			["CallRaw", "$$ = $1"],

@@ -44,9 +44,9 @@ case "js":
 case "c":
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
-	var brchstr = "_gen/_c"
+	var brchstr = "_gen/_c_simple"
 	var argv = [tfile]
-	progl.run(str, brchstr, argv, function(rtn){
+	progl.run(str, brchstr, argv, function(rtn){		
 		console.log("FINAL");
 		console.log(rtn);
 	});	

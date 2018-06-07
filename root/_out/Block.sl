@@ -1,7 +1,14 @@
 `~
-$b = getp($_0, 'brch');
+$b = getp($_0, 'dic');
 $d = "";
 $ind = getp(b, "indent");
+$nat = getp($_0, "native")
+nat?{
+ $x = get(global.brch, nat + "Impl");
+
+ x?{~~=indent(x(), ind)~;
+ ~}:
+}:{
 $x = get(global.brch, "def");
 $a = []
 each($k, $v, b, {
@@ -14,4 +21,4 @@ each($k, $v, b, {
 for($i=0;i<len($_0);i+=1, {
  $e = _0[i];
 ~~=indent(gen(e), ind)~;
-~})~`
+~})}~`

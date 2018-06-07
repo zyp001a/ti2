@@ -44,7 +44,7 @@ cptClass
 func
 func_Class
 *DOMAIN
-
+func/cpt_flag
 
 ## pipeline
 read mainfunc

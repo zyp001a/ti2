@@ -580,7 +580,7 @@ case 0:yy_.yytext = yy_.yytext.substr(2,yy_.yyleng-3).replace(/\\~/g, '~'); retu
 break;
 case 1:yy_.yytext = yy_.yytext.replace(/^[\t ]*~/, '').replace(/~[\n\r]*$/, '').replace(/\\~/g, '~'); return 7;
 break;
-case 2:return 8;
+case 2:yy_.yytext = yy_.yytext.replace(/"/g, '\\"'); return 8;
 break;
 }
 },

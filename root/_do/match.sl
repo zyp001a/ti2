@@ -1,2 +1,2 @@
-=>Array (x:String,r:String){
+=>(~Array x:String,r:String){
 }
