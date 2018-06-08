@@ -6,7 +6,7 @@
  global.imports = <> 
  global.eximports = <> 
  $x = noexec(mainblock)
- $mainstr = gen(x);
+ $mainstr = gen(x, 1);
  $str = sgen("main", [mainstr]); 
  print(str)
  writefile(argv[0]+global.postfix, str)

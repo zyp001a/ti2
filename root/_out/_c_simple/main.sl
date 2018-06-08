@@ -16,6 +16,7 @@ each($k, $v, global.imports, {~
 #define _CALL 11
 #define _BLOCK 12
 #define _ADDR 13
+#define gfunction(x) x->func
 
 char buffer[2048];
 char *strdup(const char *s) {
@@ -35,7 +36,9 @@ typedef struct _C
   void* val;
   int length;
   char type;
-  
+
+  struct _C* (*func)(struct _C **);
+
   char *name;
   char *path;  
 } C;
@@ -62,8 +65,8 @@ C* copy(C* f){
       memcpy(t->val, f->val, sizeof(double));
       break;
     case _STRING:
-      t->val = malloc(t->length*sizeof(char));
-      memcpy(t->val, f->val, t->length*sizeof(double));
+      t->val = malloc((t->length+1)*sizeof(char));
+      memcpy(t->val, f->val, (t->length+1)*sizeof(char));
       break;
     case _ARRAY:
     case _DIC:
@@ -130,15 +133,16 @@ C * Dic(){
 BST* gdic(C *x){
   return (BST *)(x->val);
 }
-C * Function(){
+C* Function(){
   C *t = (C *)malloc(sizeof(C));
   t->type = _FUNCTION;
   return t;
 }
 
-
 C** makearr(int l, ...){
-  C **x = (C**)malloc(l*sizeof(C**));
+  C **x;
+  if(l == 0) return x;
+  x = (C**)malloc(l*sizeof(C**));
   int i;
   va_list args;
   va_start (args, l);
@@ -155,13 +159,17 @@ BST *newbst(char *key, C* val){
   t->left = t->right = NULL;
   return t;
 }
-  
-// A utility function to do inorder traversal of BST
-void inorder(BST *root){
+
+void each(C **kp, C** valp, BST *root, C* (*funcp)(C**)){
+  C *r;
   if (root != NULL){
-    inorder(root->left);
-    printf("%s \n", root->val->name);
-    inorder(root->right);
+    *valp = root->val;
+    *kp = String(root->val->name, strlen(root->val->name));
+    r = (*funcp)(makearr(0));
+    //TODO continue/break
+    clear(*kp);
+    each(kp, valp, root->left, funcp);
+    each(kp, valp, root->right, funcp);
   }
 }
 BST* setbst(BST* node, char * key, C* val){

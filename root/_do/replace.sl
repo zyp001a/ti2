@@ -1,18 +1,15 @@
-=>(~Array x:String, c: String){
- $arr = []
+=>(~String x:String, c: String, r:String){
  $start =0
- $topush = "";
+ $rtn = "";
  while($start < strlen(x), {
   $tmp = strieq(x, start, c)
 	tmp?{
-	 push(arr, topush)
-	 topush = "";
+   rtn += r;
 	 start = tmp
 	}:{
 	 topush+=x[start]
 	 start+=1
 	}
  })
- push(arr, topush) 
- ~arr
+ ~rtn
 }
