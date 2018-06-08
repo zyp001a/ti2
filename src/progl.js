@@ -196,6 +196,12 @@ var its = {
 		addrset(this.env, l, r);
 		this.fn(r);
 	},
+	concat: function(r, l){
+    var v = addrget(this.env, l);
+    v += r;
+		addrset(this.env, l, v);
+		this.fn(r);
+	},
 	return: function(rtn){
 		this.fn(newcpt([rtn], "Return"));
 	},

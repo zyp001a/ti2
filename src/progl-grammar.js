@@ -114,7 +114,7 @@ var grammar = {
 			["Call", "$$ = ['call', $1]"],
 			["Addrget", "$$ = ['call', [['id', 'addrget'], $1]]"],			
 			["Assign", "if($1[1][0] == 'call' && $1[1][1][0][1] == 'addrget'){ $$ = ['call', [ ['id', 'addrset'], [$1[1][1][1][0], $1[1][1][1][1], $1[0]] ]]} else {$$ = ['call', [ ['id', 'assign'], $1 ]]}"],//$1 = [right, ['call', ]
-			
+			["Assign2", "$$ = $1"],//$1 = [right, ['call', ]			
 			["~ Raw", "$$ = ['call', [ ['id', 'return'], [$2] ]]"],
 			
 			["( Raw )", "$$ = $2"],
@@ -204,10 +204,14 @@ var grammar = {
 			["Id { }", "$$ = [$1, []];"],
 			["Id { Raws }", "$$ = [$1, $3];"],
 		],
-		
+		"Assign2": [
+			["Raw += Raw", "$$ = ['call', [ ['id', 'concat'], [$3, $1] ]]"]
+    ],
 		"Assign": [
 			["Raw = Raw", "$$ = [$3, $1]"],
-			["Raw += Raw", "$$ = [['call', [ ['id', 'plus'], [$1, $3] ] ], $1]"]
+			["Raw -= Raw", "$$ = [['call', [ ['id', 'minus'], [$1, $3] ] ], $1]"],
+			["Raw *= Raw", "$$ = [['call', [ ['id', 'times'], [$1, $3] ] ], $1]"],
+		  ["Raw /= Raw", "$$ = [['call', [ ['id', 'obelus'], [$1, $3] ] ], $1]"], 
 		],
 		"Op": [
 			["! Raw", "$$ = [['id', 'not'], [$2]]"],

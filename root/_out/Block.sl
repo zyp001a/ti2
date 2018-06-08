@@ -15,7 +15,7 @@ if($_1, {
  each($k, $v, b, {
   isint(k)?continue():
   v[0] != "local"?continue():
-  $def = x(k, v[1])
+  $def = x(global.varprefix+k, v[1])
 ~~=indent(def, ind)~;
 ~ 
  })
