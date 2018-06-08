@@ -1,4 +1,4 @@
-`~$a = $_0[1][0];log(a)~
+`~$a = $_0[1][0];~
 C* ~=global.varprefix+name($_0)~(C** __args){
 ~for($i=0;i<len(a);i+=1, {
  $v = a[i];

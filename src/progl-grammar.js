@@ -18,7 +18,7 @@ var grammar = {
 			["`(\\\\.|[^\\\\`])*`", 
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\`/g, '`'); return 'Tpl';"],
 			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"",
-			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t';return n;}); return 'String';"], 
+			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t'; return n;}); return 'Stringp';"], 
 			["\<[a-zA-Z0-9_\\\/\\s]*\>",
        "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'Relstr';"],
       ["\\\\[\\r\\n;]+", "return"],//allow \ at end of line
@@ -122,9 +122,13 @@ var grammar = {
 		Addr: [
 			["Id", "$$ = ['id', $1]"],
 			["Reg", "$$ = ['reg', $1]"],
-			["@ Id", "$$ = ['global', $2]"],
-			["@ String", "$$ = ['global', $2]"],
+//			["@ Id", "$$ = ['global', $2]"],
+//			["@ String", "$$ = ['global', $2]"],
 		],
+    String:[
+      ["Stringp", "$$ = $1"],
+      ["@ Tpl", "$$ = $2"],
+    ],
 		Rels: [
 			["Relstr", "$$ = $1.split(/\\s+/)"]
 		],

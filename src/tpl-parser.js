@@ -84,7 +84,7 @@ performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* actio
 var $0 = $$.length - 1;
 switch (yystate) {
 case 1:
-return this.$ = "$arr$ = [];push($arr$, \"" + $$[$0] + "\");join($arr$, \"\");"
+return this.$ = '$arr$ = [];push($arr$, @`' + $$[$0] + '`);join($arr$, @``);'
 break;
 case 2: case 6:
 this.$ = $$[$0]
@@ -93,10 +93,10 @@ case 3:
 this.$ = $$[$0-1] + $$[$0]
 break;
 case 4:
-this.$ = "\");push($arr$, " + $$[$0] + ");push($arr$, \""; 
+this.$ = '`);push($arr$, ' + $$[$0] + ');push($arr$, @`'; 
 break;
 case 5:
-this.$ = "\");" + $$[$0] + ";push($arr$, \""; 
+this.$ = '`);' + $$[$0] + ';push($arr$, @`'; 
 break;
 }
 },
@@ -580,7 +580,7 @@ case 0:yy_.yytext = yy_.yytext.substr(2,yy_.yyleng-3).replace(/\\~/g, '~'); retu
 break;
 case 1:yy_.yytext = yy_.yytext.replace(/^[\t ]*~/, '').replace(/~[\n\r]*$/, '').replace(/\\~/g, '~'); return 7;
 break;
-case 2:yy_.yytext = yy_.yytext.replace(/"/g, '\\"'); return 8;
+case 2:return 8;
 break;
 }
 },

@@ -8,11 +8,12 @@ switch(x->type){
 	return String("", 0);
   
   case _INT:
-  i = sprintf(buffer, "%d", gint(x->val));
+  i = sprintf(buffer, "%d", gint(x));
   return String(buffer, i);
   
   case _NUMBER:
-  return String("", 0);
+  i = sprintf(buffer, "%f", gnumber(x));
+  return String(buffer, 0);
   
   case _STRING:
   return x;

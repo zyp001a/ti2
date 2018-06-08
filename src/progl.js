@@ -1,4 +1,4 @@
- var utils = require("./utils");
+var utils = require("./utils");
 var die = utils.die;
 var log = utils.log;
 var parser = require("./progl-parser");
@@ -314,8 +314,7 @@ function noexec(cpt){
 		}
 		break;
 	case "Addr":
-		cpt.__.noexec=1;
-		
+		cpt.__.noexec=1;		
 		break;
 	case "Function":
 //		cpt = copy(cpt);
@@ -324,7 +323,8 @@ function noexec(cpt){
 	case "String":
 	case "Undefined":
 	case "Number":
-	case "Int":		
+	case "Int":
+	case "Dic":    
 		break;
 	default:
 		die(t)
@@ -634,11 +634,6 @@ function ast2cpt(ast, dic, fn){
 			});
 		}
 		break;
-	case "global":
-		get(rootdic, e, {local: 1}, function(addr){
-			fn(addr);
-		});		
-		break;
 	case "reg":
 		if(!dic[e])
 			dic[e] = newcpt(["local"], "Array");//set lexical scope
@@ -874,15 +869,15 @@ function get(dic, key, config, fn){
 						});
 					}, function(){
 						dic[key] = cpt;
-						fnsub(cpt);
+						fnsub(1);
 					});
 				});
 			}else{
 				fnsub();
 			}
 		});
-	}, function(cpt){
-		if(cpt) return getfinal(dic, key, config, fn);
+	}, function(r){
+		if(r) return getfinal(dic, key, config, fn);
 		if(config.local) return getfinalnew(dic, key, config, fn);
 		utils.eachsync(Object.values(dic.__.rels), function(link, fnsub){
 			get(link, key, {notnew:1, notaddr: config.notaddr}, fnsub);

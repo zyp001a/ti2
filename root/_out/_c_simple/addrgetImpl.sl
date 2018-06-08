@@ -1,4 +1,3 @@
-`if(x->type == _ARRAY){
-  if(x->length > k->Int) return (x->Array)[k->Int];
-}
-return Undefined()`
+`BST *d = gdic(x);
+return getbst(d, gstring(k));
+`

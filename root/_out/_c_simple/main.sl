@@ -11,7 +11,13 @@ each($k, $v, global.imports, {~
 #define _STRING 3
 #define _ARRAY 4
 #define _DIC 5
-char buffer[256];
+#define _FUNCTION 6
+
+#define _CALL 11
+#define _BLOCK 12
+#define _ADDR 13
+
+char buffer[2048];
 char *strdup(const char *s) {
   if (s == NULL) { // Optional test, s should point to a string
     return NULL;  
@@ -24,13 +30,48 @@ char *strdup(const char *s) {
   return y;
 }
 
-struct _C
+typedef struct _C
 {
   void* val;
   int length;
   char type;
-};
-typedef struct _C C;
+  
+  char *name;
+  char *path;  
+} C;
+
+typedef struct _BST{
+  struct _C *val;
+  struct _BST *left, *right;
+} BST;
+
+void clear(C* x){
+}
+int gint(C *x);
+C* copy(C* f){
+  C *t = (C *)malloc(sizeof(C));
+  t->type = f->type;
+  t->length = f->length;
+  switch(f->type){
+    case _INT:
+      t->val = malloc(sizeof(int));
+      memcpy(t->val, f->val, sizeof(int));
+      break;      
+    case _NUMBER:
+      t->val = malloc(sizeof(double));
+      memcpy(t->val, f->val, sizeof(double));
+      break;
+    case _STRING:
+      t->val = malloc(t->length*sizeof(char));
+      memcpy(t->val, f->val, t->length*sizeof(double));
+      break;
+    case _ARRAY:
+    case _DIC:
+      t->val = f->val;
+      break;
+  }
+  return t;
+}
 
 C* Undefined(){
   C *t = (C *)malloc(sizeof(C));
@@ -48,7 +89,8 @@ int gint(C *x){
   if(x->type == _INT)
     return *((int *)(x->val));
   if(x->type == _NUMBER)
-    return (int)(*((double *)(x->val)));  
+    return (int)(*((double *)(x->val)));
+  printf("wrong type for gint\n");
 }
 C* Number(double a){
   C *t = (C *)malloc(sizeof(C));
@@ -76,7 +118,26 @@ C* Array(){
   t->type = _ARRAY;
   return t;
 }
-C** makearg(int l, ...){
+C** garray(C *x){
+  return (C **)(x->val);
+}
+C * Dic(){
+  C *t = (C *)malloc(sizeof(C));
+  t->length = 0;
+  t->type = _DIC;
+  return t;
+}
+BST* gdic(C *x){
+  return (BST *)(x->val);
+}
+C * Function(){
+  C *t = (C *)malloc(sizeof(C));
+  t->type = _FUNCTION;
+  return t;
+}
+
+
+C** makearr(int l, ...){
   C **x = (C**)malloc(l*sizeof(C**));
   int i;
   va_list args;
@@ -87,6 +148,44 @@ C** makearg(int l, ...){
   va_end (args);
   return x;
 }
+BST *newbst(char *key, C* val){
+  BST *t =  (BST *)malloc(sizeof(BST));
+  t->val = copy(val);
+  t->val->name = strdup(key);
+  t->left = t->right = NULL;
+  return t;
+}
+  
+// A utility function to do inorder traversal of BST
+void inorder(BST *root){
+  if (root != NULL){
+    inorder(root->left);
+    printf("%s \n", root->val->name);
+    inorder(root->right);
+  }
+}
+BST* setbst(BST* node, char * key, C* val){
+  if (node == NULL)
+    return newbst(key, val);
+  
+  int r = strcmp(key, node->val->name);
+  if (r > 0)
+     node->left  = setbst(node->left, key, val);
+  else if (r < 0)
+     node->right = setbst(node->right, key, val);   
+  return node;
+}
+
+C* getbst(BST* node, char * key){
+  if (node == NULL) return Undefined();
+  int r = strcmp(key, node->val->name);
+  if (r > 0)
+     return getbst(node->left, key);
+  else if (r < 0)
+     return getbst(node->right, key);
+  return node->val;
+}
+
 ~=genlines(deps)~
 int main(int argc, char **argv){
 ~=indent($_0, 1)
