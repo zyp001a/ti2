@@ -8,6 +8,10 @@ var cmd = process.argv[2];
 if(process.argv.length < 3){
 	die("Usage: ./ti [command] [args]");
 }
+var argv = [];
+for(var i =3;i<process.argv.length;i++){
+  argv[i-3] = process.argv[i];
+}
 switch(cmd){
 case "run":
 	var	tfile = process.argv[3];
@@ -15,40 +19,45 @@ case "run":
 	var brchstr = process.argv[4];
 	if(brchstr) brchstr = "_"+brchstr;
 	//	var ti = new Ti({});
-	var argv = [tfile];
 	progl.run(str, brchstr, argv, function(rtn){
-		console.log("FINAL");
-		console.log(rtn);
+//		console.log("FINAL");
+//		console.log(rtn);
 	});
 	break;
 case "gen":
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
 	var brchstr = "_gen";
-	var argv = [tfile]
 	progl.run(str, brchstr, argv, function(rtn){
-		console.log("FINAL");
-		console.log(rtn);
+//		console.log("FINAL");
+//		console.log(rtn);
 	});	
 	break;
 case "js":
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
 	var brchstr = "_gen/_nodejs"
-	var argv = [tfile]
 	progl.run(str, brchstr, argv, function(rtn){
-		console.log("FINAL");
-		console.log(rtn);
+//		console.log("FINAL");
+//		console.log(rtn);
 	});	
 	break;
 case "c":
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
 	var brchstr = "_gen/_c_simple"
-	var argv = [tfile]
 	progl.run(str, brchstr, argv, function(rtn){		
-		console.log("FINAL");
-		console.log(rtn);
+//		console.log("FINAL");
+//		console.log(rtn);
+	});	
+	break;
+case "py":
+	var	tfile = process.argv[3];	
+	var str = fs.readFileSync(tfile).toString();
+	var brchstr = "_gen/_python"
+	progl.run(str, brchstr, argv, function(rtn){		
+//		console.log("FINAL");
+//		console.log(rtn);
 	});	
 	break;
 case "runp":

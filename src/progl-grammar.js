@@ -12,7 +12,7 @@ var grammar = {
       "br": "[\\n\\r;,]+"			
     },
     "rules": [
-			["\\/\\*[\\S\\s]*\\*\\/", "return;"],//COMMENT
+			["\\/\\*.*\\*\\/", "return;"],//COMMENT
 			["\\#[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 			["\\\/\\\/[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 			["`(\\\\.|[^\\\\`])*`", 
@@ -38,6 +38,8 @@ var grammar = {
       ["\\]", "return ']'"],
       ["\\{", "return '{'"],
       ["\\}", "return '}'"],
+			["\\?\\?", "return '??'"],
+			["\\:\\:", "return '::'"],      
 			["\\=\\?", "return '=?'"],
 			["\\>\\=", "return '>='"],
 			["\\<\\=", "return '<='"],
@@ -68,14 +70,14 @@ var grammar = {
 			["{br}", "return ','"],
 //      [",", "return ','"],
 //      [";", "return ','"],
-			["\\s","return"]
+			[".","return"]
     ]
   },
 	"operators": [
 		["right", "~"],
 		["right", "=>"],
 		["left", ","],
-    ["right", "?", ":"],				
+    ["right", "??", "::", "?", ":"],				
     ["right", "=", "+=", "-=", "*=", "/="],
     ["left", "||"],		
     ["left", "&&"],		
@@ -105,25 +107,32 @@ var grammar = {
 			["Addr", "$$ = $1"],
 			
 			["Block", "$$ = ['block', $1]"],
-			["@ Function", "$$ = ['native', ['function', $2, []]]"],			
+			["@ Function", "$$ = ['native', ['function', $2, []]]"],
 			["Function", "$$ = ['function', $1, []]"],
-			["Rels Function", "$$ = ['function', $2, $1]"],			
+			["Rels Function", "$$ = ['function', $2, $1]"],
 			["Rels Array", "$$ = ['arr', $2, $1]"],
 			["Array", "$$ = ['arr', $1, []]"],
-			["Rels", "$$ = ['dic', $1]"],
+			["Rels", "$$ = ['dic', {}, $1]"],
+			["Rels Dic", "$$ = ['dic', $2, $1]"],
+			["Dic", "$$ = ['dic', $1, []]"],            
 			["Call", "$$ = ['call', $1]"],
 			["Addrget", "$$ = ['call', [['id', 'addrget'], $1]]"],			
 			["Assign", "if($1[1][0] == 'call' && $1[1][1][0][1] == 'addrget'){ $$ = ['call', [ ['id', 'addrset'], [$1[1][1][1][0], $1[1][1][1][1], $1[0]] ]]} else {$$ = ['call', [ ['id', 'assign'], $1 ]]}"],//$1 = [right, ['call', ]
-			["Assign2", "$$ = $1"],//$1 = [right, ['call', ]			
+			["Assign2", "$$ = $1"],//$1 = [right, ['call', ]
+      ["@ RawStr", "$$ = ['raw', $2]"],
 			["~ Raw", "$$ = ['call', [ ['id', 'return'], [$2] ]]"],
 			
 			["( Raw )", "$$ = $2"],
 		],
+    RawStr: [
+      ["String", "$$ = $1"],
+      ["Id", "$$ = $1"],
+      ["Number", "$$ = $1.toString()"],
+      ["Reg", "$$ = '$'+$1"],      
+    ],
 		Addr: [
 			["Id", "$$ = ['id', $1]"],
 			["Reg", "$$ = ['reg', $1]"],
-//			["@ Id", "$$ = ['global', $2]"],
-//			["@ String", "$$ = ['global', $2]"],
 		],
     String:[
       ["Stringp", "$$ = $1"],
@@ -152,6 +161,16 @@ var grammar = {
       ["Raws , Raw", "$$ = $1; $1.push($3);"],
 			["Raws ,", "$$ = $1"],			//allow additional ,;
 		],
+    "NRaws": [
+      [",", "$$ = {};"],
+      ["NRaw", "$$ = {};$$[$1[0]] = $1[1]"],
+      [", NRaw", "$$ = {};$$[$2[0]] = $2[1]"],
+      ["NRaws , NRaw", "$$ = $1; $1[$3[0]] = $3[1]"],
+      ["NRaws ,", "$$ = $1;"],      
+    ],
+    "NRaw": [
+		  ["KeyColon Raw", "$$ = [$1, $2]"]
+    ],
 		"KeyColon": [
 			["Id :", "$$ = $1"],
 			["String :", "$$ = $1"],
@@ -216,8 +235,9 @@ var grammar = {
 		"Op": [
 			["! Raw", "$$ = [['id', 'not'], [$2]]"],
 			["Raw ? Raw : Raw", "$$ = [['id', 'if'], [$1, $3, $5]]"],
+			["Raw ? Raw , : Raw", "$$ = [['id', 'if'], [$1, $3, $6]]"],      
 			["Raw ? Raw : ", "$$ = [['id', 'if'], [$1, $3]]"],			
-			["Raw ? Raw , : Raw", "$$ = [['id', 'if'], [$1, $3, $6]]"],
+			["Raw ?? { Swtich }", "$$ = [['id', 'switch'], [$1, $4]]"],
 			["Raw + Raw", "$$ = [['id', 'plus'], [$1, $3]]"],
 			["Raw - Raw", "$$ = [['id', 'minus'], [$1, $3]]"],
 			["Raw * Raw", "$$ = [['id', 'times'], [$1, $3]]"],
@@ -234,7 +254,11 @@ var grammar = {
 		"Array": [
 			["[ ]", "$$ = []"],
 			["[ Raws ]", "$$ = $2"]
-		]
+		],
+    "Dic": [
+      ["@ { }", "$$ = {}"],
+      ["@ { NRaws }", "$$ = $3"],
+    ],
   }
 };
 var options = {};

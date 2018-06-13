@@ -10,5 +10,5 @@
  $str = sgen("main", [mainstr]);
  writefile(argv[0]+global.postfix, str);
  system("gcc "+argv[0]+global.postfix)
- system("./a.out") 
+ system("./a.out "+cmdarg()) 
 }

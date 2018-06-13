@@ -566,13 +566,15 @@ function cpt2str(cpt){
 		}		
 		return "[" + args + "]";
 	case "Dic":
-		return "Dic:"+cpt.__.path;
-	case "Dic":
-		return "Dic"
+		var args = "";
+		for(var k in cpt){
+			args += k + ":" + "\n";
+		}
+		return "@{\n" + args + "}";    
 	case "Function":
 		return "Function:"+cpt.__.path;
   case "Argdef":
-    log(cpt)
+//    log(cpt)
     return "Argdef";
 	default:
 		die(t)
@@ -584,6 +586,18 @@ function logcpt(cpt){
 }
 function block2arr(es, dic, fn){
 	var arr = [];
+	utils.eachsync(Object.keys(es), function(k, fnsub){
+		var arg = es[k];
+		ast2cpt(arg, dic, function(argcpt){
+			arr[k] = argcpt;
+			fnsub();
+		});
+	}, function(){
+		fn(arr);
+	});
+}
+function block2dic(es, dic, fn){
+	var arr = {};
 	utils.eachsync(Object.keys(es), function(k, fnsub){
 		var arg = es[k];
 		ast2cpt(arg, dic, function(argcpt){
@@ -647,13 +661,18 @@ function ast2cpt(ast, dic, fn){
 		break;	
 	case "tpl":
 		var newdic = newcpt({}, "Dic", dic);
-		try{
-			var toeval = tpl.parse(e);
-		}catch(err){
-			logcpt(currfile)
-			log(e)			
-			die(err)
-		}
+    var toeval;
+    if(e == ""){
+      toeval = ""
+    }else{
+		  try{
+ 			  toeval = tpl.parse(e);
+		  }catch(err){
+			  logcpt(currfile)
+			  log(e)			
+			  die(err)
+		  }
+    }
 		var tpl0 = newcpt([toeval], "Tpl", newdic);		
 //		log(toeval);
 		var tplfunc = newcpt([tpl0, [[]]], "Function", dic);
@@ -712,10 +731,12 @@ function ast2cpt(ast, dic, fn){
 		});
 		break;
 	case "dic":
-		var cpt = newcpt({}, "Dic", dic);
-		setrels(cpt, e, function(){
-			fn(cpt);			
-		})
+    block2dic(e, dic, function(cpt){
+		  newcpt(cpt, "Dic", dic);    
+		  setrels(cpt, ast[2], function(){
+			  fn(cpt);			
+		  })
+    });
 		break;
 	default:
 		die("wrong ast", ast);
@@ -899,7 +920,7 @@ function get(dic, key, config, fn){
 	});
 }
 function render(str, env, fn){
-	
+	if(str == "") return fn("");
 	newenv(env.initdic, undefined, function(nenv){
 		for(var k in env.$){
 			nenv.$["_"+k] = env.$[k];
