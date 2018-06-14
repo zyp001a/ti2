@@ -37,14 +37,14 @@ map cptnet to scope -> for run
 ## features
 
 naming:
-_ns
-Class
+_ns 
+Class 
 cpt
-cptClass
-func
-func_Class
+cptClass -> obj
+cptClass -> constructor
+func 
 *DOMAIN
-func/cpt_flag
+flag_func/cpt/Class
 
 ## pipeline
 read mainfunc

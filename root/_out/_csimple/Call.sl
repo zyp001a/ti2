@@ -1,4 +1,4 @@
-``~
+`~
 $a = [];
 for($i=0;i<len($_0[1]);i+=1, {
  a[i] = gen(_0[1][i])
@@ -6,7 +6,7 @@ for($i=0;i<len($_0[1]);i+=1, {
 if(type($_0[0]) == "Addr", {
  $b = $_0[0][1];
  $x = get(global.brch, b);
- x?{~~=x(a)~~}:{ 
+ x?{~~=x(a, _0[1])~~}:{ 
  if(!haskey(deps, b), {
    $c = id(b);
 	 $c = noexec($c);

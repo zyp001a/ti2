@@ -31,7 +31,8 @@ var grammar = {
       ["\\b{int}{frac}{exp}?\\b", "return 'Number';"],
       ["\\b0[xX][a-zA-Z0-9]+\\b", "return 'Int';"],
       ["\\.", "return '.'"],
-			["\\=\\>", "return '=>'"],			
+			["\\=\\>", "return '=>'"],
+			["\\-\\>", "return '->'"],			      
       ["\\(", "return '('"],
       ["\\)", "return ')'"],
       ["\\[", "return '['"],
@@ -115,13 +116,14 @@ var grammar = {
 			["Rels", "$$ = ['dic', {}, $1]"],
 			["Rels Dic", "$$ = ['dic', $2, $1]"],
 			["Dic", "$$ = ['dic', $1, []]"],            
+//			["Rels Class", "$$ = ['class', $2, $1]"],
+//			["Class", "$$ = ['class', $1, []]"],
 			["Call", "$$ = ['call', $1]"],
-			["Addrget", "$$ = ['call', [['id', 'addrget'], $1]]"],			
+			["Addrget", "$$ = $1"],			
 			["Assign", "if($1[1][0] == 'call' && $1[1][1][0][1] == 'addrget'){ $$ = ['call', [ ['id', 'addrset'], [$1[1][1][1][0], $1[1][1][1][1], $1[0]] ]]} else {$$ = ['call', [ ['id', 'assign'], $1 ]]}"],//$1 = [right, ['call', ]
 			["Assign2", "$$ = $1"],//$1 = [right, ['call', ]
       ["@ RawStr", "$$ = ['raw', $2]"],
 			["~ Raw", "$$ = ['call', [ ['id', 'return'], [$2] ]]"],
-			
 			["( Raw )", "$$ = $2"],
 		],
     RawStr: [
@@ -141,15 +143,21 @@ var grammar = {
 		Rels: [
 			["Relstr", "$$ = $1.split(/\\s+/)"]
 		],
-		"Addrget": [
+    "Addrget":[
+			["Addrgetx", "$$ = ['call', [['id', 'addrget'], $1]]"],
+    ],
+		"Addrgetx": [
 			["Addr . Id", "$$ = [$1, ['obj', 'String', $3]]"],
 			["Addr [ Raw ]", "$$ = [$1, $3]"],
 			["String [ Raw ]", "$$ = [['obj', 'String', $1], $3]"],
-			["Addrget . Id", "$$ = [['call', [['id', 'addrget'], $1]], ['obj', 'String', $3]]"],
-			["Addrget [ Raw ]", "$$ = [['call', [['id', 'addrget'], $1]], $3]"],
+			["Addrgetx . Id", "$$ = [['call', [['id', 'addrget'], $1]], ['obj', 'String', $3]]"],
+			["Addrgetx [ Raw ]", "$$ = [['call', [['id', 'addrget'], $1]], $3]"],
 			["( Raw ) . Id", "$$ = [$2, ['obj', 'String', $5]]"],			
 			["( Raw ) [ Raw ]", "$$ = [$2, $5]"],
 		],
+//		"Prop": [
+//			["Id -> Id", "$$ = ['prop', [$1, $3]]"],
+//    ],    
 		"Block": [
 			["{ }", "$$= []"],
 			["{ Raws }", "$$ = $2"],
@@ -212,13 +220,13 @@ var grammar = {
 		"CallRaw": [
 			["Addr ( )", "$$ = [$1, []];"],
 			["Addr ( Raws )", "$$ = [$1, $3];"],
+			["Addrget ( )", "$$ = [$1, []];"],
+			["Addrget ( Raws )", "$$ = [$1, $3];"],
+			["Prop ( )", "$$ = [$1, []];"],
+			["Prop ( Raws )", "$$ = [$1, $3];"],
 			["CallRaw ( )", "$$ = [['call', $1]];"],
 			["CallRaw ( Raws )", "$$ = [['call', $1], $3];"],
 		],
-		
-		"Class": [
-			["Id => Rels Block", "$$= [$4, $3, $1]"]
-		],		
 		"New": [
 			["Id { }", "$$ = [$1, []];"],
 			["Id { Raws }", "$$ = [$1, $3];"],
@@ -258,6 +266,10 @@ var grammar = {
     "Dic": [
       ["@ { }", "$$ = {}"],
       ["@ { NRaws }", "$$ = $3"],
+    ],
+    "Class": [
+      ["@ [ ]", "$$ = {}"],
+      ["@ [ NRaws ]", "$$ = $3"],
     ],
   }
 };

@@ -1,10 +1,9 @@
 =>{
  global.indent = "  ";
- global.brch = idglobal("_out/_c_simple");
+ global.brch = idglobal("_out/_csimple");
  global.postfix = ".c";
  global.varprefix = "_";
  global.imports = <>
- global.dymc = 0
  $x = noexec(mainblock);
  $mainstr = gen(x, 1);
  $str = sgen("main", [mainstr]);

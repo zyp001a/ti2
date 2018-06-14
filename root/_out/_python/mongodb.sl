@@ -1,0 +1,4 @@
+@[
+ connect: `a`
+ select: `b`
+]

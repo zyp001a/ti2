@@ -2,6 +2,7 @@
 global.imports.string = 1;
 global.imports.stdlib = 1;
 global.imports.stdarg = 1;
+global.imports.stdio = 1;
 each($k, $v, global.imports, {~
 #include <~=k~.h>
 ~})~

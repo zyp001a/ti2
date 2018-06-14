@@ -8,13 +8,13 @@ module.exports = {
 	get: get,
 	set: set
 }
-var root = "./root";
+var root = __dirname + "/../root";
 function setroot(_root){
 	root = _root;	
 }
 
 function get(key, fn){
-	var tpath = path.join(root, key);
+	var tpath = path.join(root, key.replace(/([^_\/])_/, "$1/"));
 	if(fs.existsSync(tpath+'.sl')){
 		return fn(fs.readFileSync(tpath +".sl").toString() || "");		
 	}

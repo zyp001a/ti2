@@ -14,6 +14,7 @@ function pop(env){
 function push(env, $new){
 	env.stack.push(env.$);
 	env.$ = $new || newcpt({}, "Dic");
+  env.$.__.execd = 1;
 	if(env.stack.length > 50) die("stack overflow")
 }
 function hashpush(hash, val){
@@ -261,7 +262,6 @@ function copy(cpt){
 	case "Number":
 	case "Int":		
 	case "Dic":
-	case "Dic":			
 		return cpt;
 	case "Addr":
 		ncpt[0] = cpt[0];
@@ -385,6 +385,7 @@ function execcall(cpt, env, fn){
 		var args = cpt[1];
 		
 		var $args = newcpt({}, "Dic");
+    $args.__.execd = 1;
 		var argtmp = [];
 		$args.$=$args;
 		utils.eachsync(Object.keys(args), function(i, fnsub){
@@ -526,6 +527,8 @@ rootdic.__.path = "";
 rootdic.__.level = 0;
 rootdic.__.isroot = 1;
 rootdic.__.fixed = 1;
+rootdic.__.execd = 1;
+
 function progl2cpt(str, dic, fn){
 	var ast = parser.parse(str);
 	ast2cpt(ast, dic, function(cpt){
@@ -635,12 +638,13 @@ function ast2cpt(ast, dic, fn){
 			if(ee && ee.__ && ee.__.fixed)//is named function
 				return fn(newcpt([dic,e], "Addr"));
 			return fn(newcpt([dic, e, 0], "Addr"));
-		}else if(Object.getOwnPropertyDescriptor(dic.__.dic, e)){
+		}else if(Object.getOwnPropertyDescriptor(dic.__.dic, e)){//TODO multi level
 			var ee = dic.__.dic[e];			
 			if(ee && ee.__ && ee.__.fixed)//is named function
 				return fn(newcpt([dic.__.dic,e], "Addr"));			
 			return fn(newcpt([dic.__.dic, e, 1],"Addr"));			
 		}else{
+      //TODO import
 			get(dic, e, {notnew: 1}, function(addr){
 				if(addr){
 					if(gettype(addr) !="Addr"){
@@ -661,6 +665,7 @@ function ast2cpt(ast, dic, fn){
 		break;	
 	case "tpl":
 		var newdic = newcpt({}, "Dic", dic);
+    newdic.execd = 1;
     var toeval;
     if(e == ""){
       toeval = ""
@@ -688,6 +693,7 @@ function ast2cpt(ast, dic, fn){
 		break;
 	case "function":
 		var newdic = newcpt({}, "Dic", dic, e[3]?"_"+e[3]:undefined);
+    newdic.__.execd = 1;
 		newdic.__.indent = dic.__.indent + 1;
 		var func = newcpt([], "Function", dic, e[3]);
 //		newdic.this = func;
@@ -733,6 +739,14 @@ function ast2cpt(ast, dic, fn){
 	case "dic":
     block2dic(e, dic, function(cpt){
 		  newcpt(cpt, "Dic", dic);    
+		  setrels(cpt, ast[2], function(){
+			  fn(cpt);			
+		  })
+    });
+		break;
+	case "class":
+    block2dic(e, dic, function(cpt){
+		  newcpt(cpt, "Class", dic);    
 		  setrels(cpt, ast[2], function(){
 			  fn(cpt);			
 		  })
@@ -831,6 +845,7 @@ function getfinalnew(dic, key, config, fn){
 	if(!config.notnew){
 		if(config.notaddr){
 			var newc = newcpt({}, "Dic", dic, key);
+      newc.execd = 1;
 			fn(newc);
 		}else{
 			dic[key] = undefined;
@@ -957,8 +972,9 @@ function execblock(cpt, env, fn){
 }
 function execarray(cpt, env, fn){
 	if(gettype(cpt) != "Array"){
-		die("not Block", cpt);
+		die("not Array", cpt);
 	}
+  if(cpt.__.execd) return fn(cpt)
 	var ncpt = newcpt([], "Array", env.$._dic);
 	utils.eachsync(Object.keys(cpt), function(k, fnsub){
 		var c = cpt[k];
@@ -967,11 +983,30 @@ function execarray(cpt, env, fn){
 			fnsub();
 		})
 	}, function(){
+    ncpt.__.execd = 1;
+		fn(ncpt);
+	})	
+}
+function execdic(cpt, env, fn){
+	if(gettype(cpt) != "Dic"){
+		die("not Dic", cpt);
+	}
+  if(cpt.__.execd) return fn(cpt)  
+	var ncpt = newcpt({}, "Dic", env.$._dic);
+	utils.eachsync(Object.keys(cpt), function(k, fnsub){
+		var c = cpt[k];
+		exec(c, env, function(rtn){
+			ncpt[k] = rtn;
+			fnsub();
+		})
+	}, function(){
+    ncpt.__.execd = 1;    
 		fn(ncpt);
 	})	
 }
 //Lexical scope only
 function exec(cpt, env, fn){
+
 	var type = gettype(cpt);
 	switch(type){
 	case "Block":
@@ -993,6 +1028,14 @@ function exec(cpt, env, fn){
 			fn(rtn)
 		});		
 		break;
+    
+	case "Dic":
+		if(cpt.__.noexec) return fn(cpt);
+		execdic(cpt, env, function(rtn){
+			fn(rtn)
+		});		
+		break;
+
 	case "Addr":
 		if(cpt.__.noexec) return fn(cpt);
 		if(cpt[3]) return fn(cpt);
@@ -1013,6 +1056,8 @@ function newenv(dic, lang, fn){
 			stack: newcpt([], "Array"),
 			initdic: ldic
 		}, "Dic", ldic);
+    env.__.execd = 1
+    env.$.__.execd = 1;
 		env.$._dic = ldic;
 		env.$.$ = env.$;
 		get(ldic, "main", {notaddr: 1, notnew: 1}, function(cpt){

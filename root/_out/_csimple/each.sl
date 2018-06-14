@@ -1,6 +1,5 @@
 `~
-$n = "_x"+ string(global.dymc);
-global.dymc+=1
+$n = "_x"+ autoname();
 ~
 C* ~=n~(C** __n){
   ~=$_0[3]~}
