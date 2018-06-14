@@ -104,6 +104,9 @@ var its = {
 	strlen: function(str){
 		this.fn(str.length);
 	},
+	diclen: function(dic){
+		this.fn(Object.keys(dic).length);
+	},
 	free: function(addr){
 		addrdel(this.env, addr);
 		this.fn();

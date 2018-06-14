@@ -136,7 +136,7 @@ C * Dic(BST *b, int len){
   C *t = (C *)malloc(sizeof(C));
   if(b)
     t->val = (void *)b;
-  t->length = 0;
+  t->length = len;
   t->type = _DIC;
   return t;
 }
@@ -150,7 +150,7 @@ C* Function(){
 }
 
 C** makearr(int l, ...){
-  C **x;
+  C **x = NULL;
   if(l == 0) return x;
   x = (C**)malloc(l*sizeof(C**));
   int i;
@@ -258,6 +258,23 @@ struct node* deleteNode(struct node* root, int key)
     return root;
 }
 */
+BST* makedic(int l, ...){
+  BST *d = NULL;
+  if(l == 0) return d;
+  int i;
+  va_list args;
+  va_start (args, l);
+  C* c1 = va_arg(args, C*);
+  C* c2 = va_arg(args, C*);  
+  d = setbst(d, gstring(c1), c2);
+  for (i = 1; i < l; i++) {
+    c1 = va_arg(args, C*);
+    c2 = va_arg(args, C*);
+    setbst(d, gstring(c1), c2);    
+  }
+  va_end (args);
+  return d;
+}
 ~=genlines(deps)~
 int main(int argc, char **argv){
   int __i;
