@@ -2,12 +2,11 @@
 $b = getp($_0, 'dic');
 $d = "";
 $ind = getp(b, "indent");
-$nat = getp($_0, "native")
-nat?{
- $x = get(global.brch, nat + "Impl");
-
- x?{~~=indent(x(), ind)~;
- ~}:
+$n = name($_0)
+$x = get(global.brch, n + "Impl");
+x?{
+~~=indent(x(), ind)~;
+ ~
 }:{
 $x = get(global.brch, "def");
 $a = []

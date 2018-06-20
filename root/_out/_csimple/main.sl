@@ -111,7 +111,9 @@ double gnumber(C *x){
 }
 C* String(char* str, int len){
   C *t = (C *)malloc(sizeof(C));
-  t->val = (void *)strdup(str);
+  if(str != NULL){
+    t->val = (void *)strdup(str);
+  }
   t->length = len;
   t->type = _STRING;
   return t;
@@ -204,9 +206,9 @@ C* getbst(BST* node, char * key){
   if (node == NULL) return Undefined();
   int r = strcmp(key, node->val->name);
   if (r > 0)
-     return getbst(node->left, key);
+    return getbst(node->left, key);
   else if (r < 0)
-     return getbst(node->right, key);
+    return getbst(node->right, key);
   return node->val;
 }
 /* Given a binary search tree and a key, this function deletes the key

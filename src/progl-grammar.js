@@ -27,9 +27,9 @@ var grammar = {
 			["\\$({letter}|{digit}|\\$)*",
 			 "yytext = yytext.substr(1);return 'Reg'"],
 //TODO bignumber			
-      ["\\b{int}\\b", "return 'Int';"],			
-      ["\\b{int}{frac}{exp}?\\b", "return 'Number';"],
-      ["\\b0[xX][a-zA-Z0-9]+\\b", "return 'Int';"],
+      ["{int}\\b", "return 'Int';"],			
+      ["{int}{frac}{exp}?\\b", "return 'Number';"],
+      ["0[xX][a-zA-Z0-9]+\\b", "return 'Int';"],
       ["\\.", "return '.'"],
 			["\\=\\>", "return '=>'"],
 			["\\-\\>", "return '->'"],			      

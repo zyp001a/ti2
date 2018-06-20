@@ -1,4 +1,6 @@
-`~global.imports.fcntl=1~
+`~global.imports.fcntl=1
+global.imports.unistd=1
+~
 char *mode = gstring(_mode);
 int m = O_RDONLY;
 int l = strlen(mode);

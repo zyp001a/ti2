@@ -81,17 +81,6 @@ var its = {
 		logcpt(c)
 		this.fn()
 	},
-	not: function(c){
-		this.fn(!c);		
-	},
-	and: function(l, r){
-		if(!l) return this.fn(false);
-		exec(r, this.env, this.fn);
-	},
-	or: function(l, r){
-		if(l) return this.fn(true);
-		exec(r, this.env, this.fn);
-	},
 	haskey: function(h, k){
 		var v = !!Object.getOwnPropertyDescriptor(h, k.toString());
 		this.fn(v);
@@ -175,26 +164,31 @@ var its = {
 	plus: function(l, r){
 		this.fn(l+r);
 	},
+	minus: function(l, r){
+		this.fn(l-r);
+	},
 	times: function(l, r){
 		this.fn(l*r);		
 	},
+	not: function(c){
+		this.fn(!c);		
+	},
+	and: function(l, r){
+		if(!l) return this.fn(false);
+		exec(r, this.env, this.fn);
+	},
+	or: function(l, r){
+		if(l) return this.fn(true);
+		exec(r, this.env, this.fn);
+	},  
 	eq: function(l, r){
 		this.fn(l==r);
-	},
-	ne: function(l, r){
-		this.fn(l!=r);
 	},
 	lt: function(l, r){
 		this.fn(l<r);
 	},
-	le: function(l, r){
-		this.fn(l<=r);		
-	},
 	gt: function(l, r){
 		this.fn(l>r);				
-	},
-	ge: function(l, r){
-		this.fn(l>=r);		
 	},
 	assign: function(r, l){
 		addrset(this.env, l, r);
@@ -252,7 +246,15 @@ var its = {
 		if(x == undefined) return this.fn("");
 		if(typeof x == "object") return this.fn(utils.stringify(x));
 		return this.fn(x.toString());
-	}
+	},
+  block: function(x){
+    var fn = this.fn;
+		if(typeof x != "object") return fn(x);
+    if(gettype(x) == "Call"){
+      return fn(noexec(newcpt([x], "Block", x.__.dic)));
+    }
+    fn(x)
+  },
 }
 function copy(cpt){
 	var t = gettype(cpt);
@@ -729,7 +731,7 @@ function ast2cpt(ast, dic, fn){
 		ast2cpt(e[0], dic, function(func){
 			block2arr(e[1], dic, function(args){
 				newcpt(args, "Array", dic);
-				return fn(newcpt([func, args], "Call"));
+				return fn(newcpt([func, args], "Call", dic));
 			});
 		});
 		break;
@@ -808,8 +810,14 @@ function convert(cpt, type, env, flag, fn){
 		return;
 	}	
 	if(type == "Callable"){
-		if(typeof cpt == "object" && typeof(cpt.__.dic) == "object")
+    /*
+		if(typeof cpt == "object" && typeof(cpt.__.dic) == "object"){
+      if(otype == "Call"){
+        cpt = newcpt([cpt], "Block", cpt.__.dic);
+      }      
 			cpt.__.indent = cpt.__.dic.__.indent + 1;
+    }
+*/
 //		if(otype == "Addr"){
 //			exec(cpt, env, fn);
 //		}else{
@@ -904,6 +912,8 @@ function get(dic, key, config, fn){
 							c.native = its[key];
 							cpt[0].__.native = key;
 						}
+            if(gettype(cpt) == "Function")
+						  cpt[0].__.name = key;                          
 						if(dic.__.isroot) return fnsub2()
 						get(dic.__.dic, key, {notaddr: 1, notnew:1}, function(cptpre){
 							if(cptpre == undefined) return fnsub2()
@@ -925,10 +935,11 @@ function get(dic, key, config, fn){
 		if(r) return getfinal(dic, key, config, fn);
 		if(config.local) return getfinalnew(dic, key, config, fn);
 		utils.eachsync(Object.values(dic.__.rels), function(link, fnsub){
-			get(link, key, {notnew:1, notaddr: config.notaddr}, fnsub);
+			get(link, key, {notnew:1, notaddr: config.notaddr, notparent: 1}, fnsub);
 		}, function(res){
 			if(res) return fn(res);
 			utils.ifsync(dic.__.dic, function(fnsub){
+        if(config.notparent) return fnsub();
 				get(dic.__.dic, key, {notnew:1, notaddr:config.notaddr}, fnsub);
 			}, function(res){
 				if(res) return fn(res);
@@ -1104,7 +1115,7 @@ function run(str, lang, argv, fn){
 		argvcpt.__.fixed = 1;
 		newenv(_do, lang, function(env){
 			progl2cpt("{"+str+"\n}", env.__.dic, function(maincpt){
-				var newcall = newcpt([env.main, newcpt([maincpt], "Array", env.__.dic)], "Call");
+				var newcall = newcpt([env.main, newcpt([maincpt], "Array", env.__.dic)], "Call", env.__.dic);
 				exec(newcall, env, function(rtn){
 					fn(rtn);
 				})
