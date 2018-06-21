@@ -96,7 +96,7 @@ case 4:
 this.$ = '`);push($arr$, ' + $$[$0] + ');push($arr$, @`'; 
 break;
 case 5:
-this.$ = '`);' + $$[$0] + ';push($arr$, @`'; 
+this.$ = '`);' + $$[$0] + 'push($arr$, @`'; 
 break;
 }
 },

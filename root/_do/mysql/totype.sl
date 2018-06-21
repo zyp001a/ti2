@@ -22,7 +22,7 @@
       s += "float"
     }
   }:x[0] == String?{
-    c.size ?= 4
+    c.size ?= 255
     c.char ? $t = "char": $t = "varchar"
     c.blob ? s += "blob" : {
       s += t+"("+c.size+")"
@@ -41,8 +41,10 @@
   }:
   c.unsigned?s+= " UNSIGNED":    
   c.zerofil?s+= " ZEROFILL":
-  defined(x[1])?s+= " NOT NULL DEFAULT '"+ x[1]+ "'"
+  haskey(c, "default")?s+= " NOT NULL DEFAULT '"+ c.default+ "'"
     :c.notnull? s+= " NOT NULL":
   c.ref?foreigns[k] = c.ref:
+  s = k + "  " + s + ","
+  defined(x[1])?s+= "--"+x[1]:  
   ~s
 }
