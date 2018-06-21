@@ -8,4 +8,4 @@ writefileifchange(argv[0]+"."+$_1[0]+".y", $y)?{
  system("echo 2"))
 }:
 ~
-Func(~=$n~parse)`
+Function(~=$n~parse)`

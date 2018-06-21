@@ -13,6 +13,6 @@ if(type($_0[0]) == "Addr", {
    deps[b] = gen($c);
   })
 ~
-~=global.varprefix+$b~(makearr(~=len(a)~, ~=join(a, ',')~))~
+_call(fpc~=global.varprefix+$b~, makearr(~=len(a)~, ~=join(a, ',')~), ~=len(a)~)~
  }
 })~`

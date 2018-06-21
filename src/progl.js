@@ -68,6 +68,7 @@ var its = {
 		this.fn(v);
 	},
 	system: function(str){
+    log(str);
 		var fn = this.fn;
 		var x = system(str,  {cwd: global.process.env.pwd});
 		x.stdout.pipe(process.stdout);
@@ -182,7 +183,14 @@ var its = {
 		exec(r, this.env, this.fn);
 	},  
 	eq: function(l, r){
-		this.fn(l==r);
+    if(typeof l == "object" && typeof r == "object"){
+      var tl = gettype(l);
+      var tr = gettype(r);
+      if(tl != tr) return this.fn(0);      
+      if(tl == "Class") return this.fn(l.__.path == r.__.path);
+    }else{
+		  this.fn(l==r);
+    }
 	},
 	lt: function(l, r){
 		this.fn(l<r);
@@ -200,6 +208,16 @@ var its = {
 		addrset(this.env, l, v);
 		this.fn(r);
 	},
+	default: function(r, l){
+    var v = addrget(this.env, l);
+    if(v === undefined)      
+		  addrset(this.env, l, r);
+		this.fn(r);
+	},
+  defined: function(v){
+    if(v === undefined) return this.fn(0);
+    this.fn(1);
+  },
 	return: function(rtn){
 		this.fn(newcpt([rtn], "Return"));
 	},
@@ -1044,6 +1062,7 @@ function exec(cpt, env, fn){
 		break;
     
 	case "Dic":
+	case "Class":    
 		if(cpt.__.noexec) return fn(cpt);
 		execdic(cpt, env, function(rtn){
 			fn(rtn)

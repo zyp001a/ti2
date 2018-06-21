@@ -12,11 +12,15 @@ each($k, $v, global.imports, {~
 #define _STRING 3
 #define _ARRAY 4
 #define _DIC 5
-#define _FUNCTION 6
+#define _CLASS 6
+#define _RAW 7
 
-#define _CALL 11
-#define _BLOCK 12
-#define _ADDR 13
+#define _FUNCTION 11
+
+#define _CALL 21
+#define _BLOCK 22
+#define _ADDR 23
+
 #define gfunction(x) x->func
 
 char buffer[2048];
@@ -38,10 +42,11 @@ typedef struct _C
   int length;
   char type;
 
-  struct _C* (*func)(struct _C **);
+  struct _C* (*func)(struct _C **, int);
 
   char *name;
   char *path;
+  char keep;
 } C;
 
 typedef struct _BST{
@@ -49,12 +54,30 @@ typedef struct _BST{
   struct _BST *left, *right;
   int v;
 } BST;
-
+int gint(C *x);
+char* gstring(C *x);
+double gnumber(C *x);
+void freebst(BST* n);
+void clear(C* x);
+void keep(C* x);
+void keep(C* x){
+  x->keep = 1;
+}
+void unkeep(C* x){
+  x->keep = 0;
+}
 void clear(C* x){
-  free(x->val);
+  if(x->keep){
+    x->keep = 0;
+    return;
+  }
+  if(x->type == _FUNCTION)
+    freebst((BST*)(x->val));
+  else
+    free(x->val);
+  free(x->name);
   free(x);
 }
-int gint(C *x);
 C* copy(C* f){
   C *t = (C *)malloc(sizeof(C));
   t->type = f->type;
@@ -145,12 +168,12 @@ C * Dic(BST *b, int len){
 BST* gdic(C *x){
   return (BST *)(x->val);
 }
-C* Function(){
+C* Function(C* (*funcp)(C**, int)){
   C *t = (C *)malloc(sizeof(C));
+  t->func = funcp;
   t->type = _FUNCTION;
   return t;
 }
-
 C** makearr(int l, ...){
   C **x = NULL;
   if(l == 0) return x;
@@ -172,13 +195,19 @@ BST *newbst(char *key, C* val){
   t->v = 0;
   return t;
 }
-
-void each(C **kp, C** valp, BST *root, C* (*funcp)(C**)){
+void freebst(BST* n){
+  if(n == NULL) return;
+  clear(n->val);  
+  freebst(n->left);  
+  freebst(n->right);
+  free(n);
+}
+void each(C **kp, C** valp, BST *root, C* (*funcp)(C**, int)){
   C *r;
   if (root != NULL){
     *valp = root->val;
     *kp = String(root->val->name, strlen(root->val->name));
-    r = (*funcp)(makearr(0));
+    r = (*funcp)(makearr(0), 0);
     //TODO continue/break
     clear(*kp);
     each(kp, valp, root->left, funcp);
@@ -201,7 +230,6 @@ BST* setbst(BST* node, char * key, C* val){
   }
   return node;
 }
-
 C* getbst(BST* node, char * key){
   if (node == NULL) return Undefined();
   int r = strcmp(key, node->val->name);
@@ -277,6 +305,22 @@ BST* makedic(int l, ...){
   va_end (args);
   return d;
 }
+C* _call(C* c, C** args, int len){
+  C* r = (*(c->func))(args, len);
+  int i;
+  keep(r);
+  for(i=0; i<len; i++){
+    clear(args[i]);
+  }
+  free(args);
+  unkeep(r);
+  return r;
+}
+~each($k, $v, deps, {~
+C* f~=global.varprefix+k~(C**, int);
+C* (*fp~=global.varprefix+k~)(C**, int) = &f~=global.varprefix+k~;
+C* fpc~=global.varprefix+k~;
+~})~
 ~=genlines(deps)~
 int main(int argc, char **argv){
   int __i;
@@ -285,7 +329,9 @@ int main(int argc, char **argv){
   for(__i=0; __i<argc; __i++){
     __tmp[__i] = String(argv[__i], strlen(argv[__i]));
   }
-  
+~each($k, $v, deps, {~
+  fpc~=global.varprefix+k~ = Function(fp~=global.varprefix+k~);
+~})~
 ~=indent($_0, 1)
 ~
   return 0;
