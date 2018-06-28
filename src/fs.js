@@ -4,6 +4,8 @@ module.exports = {
 	close: fs.closeSync,
 	write: fs.writeSync,
 	read: fs.readSync,
-	stat: fs.statSync,
+	stat: fs.lstatSync,
+	exist: fs.existsSync,
 	access: fs.accessSync,
+	mkdir: fs.mkdirSync
 }

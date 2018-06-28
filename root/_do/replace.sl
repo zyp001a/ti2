@@ -7,7 +7,7 @@
    rtn += r;
 	 start = tmp
 	}:{
-	 topush+=x[start]
+	 rtn+=x[start]
 	 start+=1
 	}
  })

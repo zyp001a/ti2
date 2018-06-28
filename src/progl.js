@@ -43,14 +43,34 @@ function cacheadd(dic, key){
 }
 var _do;
 var its = {
-	stat: function(fname){
-		this.fn(fs.stat(fname));
-	},
+	mkdir: function(d){
+		this.fn(fs.mkdir(d))
+	},	
+	exist: function(df){
+		var fn = this.fn;
+		if(fs.exist(df)){
+			var stat = fs.stat(df);
+			if(stat.isFile()) return get(_do, "File", {local:1}, fn);
+			if(stat.isDirectory()) return get(_do, "Dir", {local:1}, fn);
+			if(stat.isSymbolicLink()) return get(_do, "Symboliclink", {local:1}, fn);			
+		}
+		fn()
+	},	
 	write: function(fd, x){
 		this.fn(fs.write(fd, x));
 	},
 	read: function(fd, buffer, offset, length, position){
 		this.fn();
+	},
+	match: function(str, reg, op){		
+		var r = new RegExp(reg, op)
+		var m = str.match(r)
+		if(!m) return this.fn();
+		var rtn = newcpt([], "Array");
+		for(var i=1; i<m.length; i++){
+			rtn.push(m[i])
+		}
+		this.fn(rtn)
 	},
 	open: function(fname, mod){
 		this.fn(fs.open(fname, mod));
@@ -600,8 +620,10 @@ function cpt2str(cpt){
 			args += k + ":" + "\n";
 		}
 		return "@{\n" + args + "}";    
+	case "Class":
+		return "Class: "+cpt.__.name;    
 	case "Function":
-		return "Function:"+cpt.__.path;
+		return "Function: "+cpt.__.path;
   case "Argdef":
 //    log(cpt)
     return "Argdef";

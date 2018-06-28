@@ -40,6 +40,8 @@ var grammar = {
       ["\\]", "return ']'"],
       ["\\{", "return '{'"],
       ["\\}", "return '}'"],
+			["\\+\\+", "return '++'"],
+			["\\-\\-", "return '--'"],			
 			["\\?\\?", "return '??'"],
 			["\\:\\:", "return '::'"],      
 			["\\?\\=", "return '?='"],
@@ -76,7 +78,6 @@ var grammar = {
     ]
   },
 	"operators": [
-    ["right", "Comment"],							
 		["right", "~"],
 		["right", "=>"],
 		["left", ","],
@@ -88,7 +89,8 @@ var grammar = {
 		["left", "<", "<=", ">", ">="],		
     ["left", "+", "-"],		
     ["left", "*", "/", "%"],
-    ["right", "&", "@"],		
+    ["left", "++", "--"],		
+    ["right", "&", "@"],
     ["right", "!"],
 		["left", "(", ")", "[", "]", "{", "}"],		 
 	],
@@ -239,11 +241,13 @@ var grammar = {
 		],
 		"Assign2": [
 			["Raw ?= Raw", "$$ = ['call', [ ['id', 'default'], [$3, $1] ]]"],      
-			["Raw += Raw", "$$ = ['call', [ ['id', 'concat'], [$3, $1] ]]"],      
+			["Raw += Raw", "$$ = ['call', [ ['id', 'concat'], [$3, $1] ]]"],
+			["Raw ++", "$$ = ['call', [ ['id', 'concat'], [ ['obj', 'Int', 1], $1] ]]"],      			
     ],
 		"Assign": [
 			["Raw = Raw", "$$ = [$3, $1]"],
 			["Raw -= Raw", "$$ = [['call', [ ['id', 'minus'], [$1, $3] ] ], $1]"],
+			["Raw --", "$$ = [['call', [ ['id', 'minus'], [$1,  ['obj', 'Int', 1] ] ] ], $1]"],			
 			["Raw *= Raw", "$$ = [['call', [ ['id', 'times'], [$1, $3] ] ], $1]"],
 		  ["Raw /= Raw", "$$ = [['call', [ ['id', 'obelus'], [$1, $3] ] ], $1]"], 
 		],
