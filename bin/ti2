@@ -13,6 +13,15 @@ for(var i =3;i<process.argv.length;i++){
   argv[i-3] = process.argv[i];
 }
 switch(cmd){
+case "r":
+	var	tfile = process.argv[3];
+	var str = fs.readFileSync(tfile).toString();
+	var brchstr = process.argv[4];
+	if(!brchstr) brchstr = "_natl";
+	progl.run(str, brchstr, argv, function(rtn){
+//		console.log("FINAL");
+//		console.log(rtn);
+	});	
 case "run":
 	var	tfile = process.argv[3];
 	var str = fs.readFileSync(tfile).toString();

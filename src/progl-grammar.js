@@ -13,8 +13,9 @@ var grammar = {
     },
     "rules": [
 			["\\/\\*.*\\*\\/", "return;"],//COMMENT
-			["\\#[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 			["\\\/\\\/[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
+			["#(\\\\.|[^\\\\#])*#", 
+			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\#/g, '#'); return 'Comment';"],			
 			["`(\\\\.|[^\\\\`])*`", 
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\`/g, '`'); return 'Tpl';"],
 			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"",
@@ -27,7 +28,7 @@ var grammar = {
 			["\\$({letter}|{digit}|\\$)*",
 			 "yytext = yytext.substr(1);return 'Reg'"],
 //TODO bignumber			
-      ["{int}\\b", "return 'Int';"],			
+      ["{int}\\b", "return 'Int';"],
       ["{int}{frac}{exp}?\\b", "return 'Number';"],
       ["0[xX][a-zA-Z0-9]+\\b", "return 'Int';"],
       ["\\.", "return '.'"],
@@ -75,6 +76,7 @@ var grammar = {
     ]
   },
 	"operators": [
+    ["right", "Comment"],							
 		["right", "~"],
 		["right", "=>"],
 		["left", ","],
@@ -87,7 +89,7 @@ var grammar = {
     ["left", "+", "-"],		
     ["left", "*", "/", "%"],
     ["right", "&", "@"],		
-    ["right", "!"],			
+    ["right", "!"],
 		["left", "(", ")", "[", "]", "{", "}"],		 
 	],
   "start": "Start",
@@ -97,7 +99,7 @@ var grammar = {
 			["Raw", "return $$ = $1"],
 			["Raw ,", "return $$ = $1"],
 		],
-		"Raw": [			
+		"Raw": [
 			["Number", "$$ = ['obj', 'Number', Number($1)]"],
 			["Int", "$$ = ['obj', 'Int', Number($1)]"],
 			["String", "$$ = ['obj', 'String', $1]"],
@@ -108,9 +110,8 @@ var grammar = {
 			["Addr", "$$ = $1"],
 			
 			["Block", "$$ = ['block', $1]"],
-			["@ Function", "$$ = ['native', ['function', $2, []]]"],
-			["Function", "$$ = ['function', $1, []]"],
-			["Rels Function", "$$ = ['function', $2, $1]"],
+			["Function", "$$ = $1"],
+			["Comment Function", "$$ = $2; $2[4] = $1"],			
 			["Rels Array", "$$ = ['arr', $2, $1]"],
 			["Array", "$$ = ['arr', $1, []]"],
 			["Rels", "$$ = ['dic', {}, $1]"],
@@ -186,6 +187,11 @@ var grammar = {
 			["Int :", "$$ = $1"],	
 		],
 		"Function": [
+			["@ FunctionContent", "$$ = ['native', $2, []]"],
+			["FunctionContent", "$$ = ['function', $1, []]"],
+			["Rels FunctionContent", "$$ = ['function', $2, $1]"],
+		],
+		"FunctionContent": [
 			["FunctionBody", "$$= $1;"],
 			["Id FunctionBody", "$$= $2; $$[3] = $1"]
 		],

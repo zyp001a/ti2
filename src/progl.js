@@ -127,6 +127,9 @@ var its = {
 		var fn = this.fn;		
 		execblock(main, env, fn);
 	},
+	parse: function(input, brch){
+		progl2cpt(input, brch, this.fn);
+	},
 	getp: function(cpt, k){
 		this.fn(cpt.__[k])
 	},
@@ -707,13 +710,7 @@ function ast2cpt(ast, dic, fn){
 		tplfunc.__.tpl = 1;		
 		fn(tplfunc);
 		break;
-	case "native":
-		ast2cpt(e, dic, function(func){
-			func.__.native = 1;
-			func[0].__.native = 1;
-			fn(func)
-		});
-		break;
+	case "native":		
 	case "function":
 		var newdic = newcpt({}, "Dic", dic, e[3]?"_"+e[3]:undefined);
     newdic.__.execd = 1;
@@ -736,6 +733,10 @@ function ast2cpt(ast, dic, fn){
 			if(t != "Call" && t!="Block") die(e);
 			func[0] = ee;
 			setrels(func, ast[2], function(){
+				if(c=="native"){
+					func.__.native = 1;
+					func[0].__.native = 1;
+				}
 				fn(func);
 			})			
 		});
@@ -1123,6 +1124,7 @@ function _eval(str, env, fn){
 		});
 	});
 }
+
 function run(str, lang, argv, fn){
 	if(!fn){
 		fn = lang;
@@ -1134,7 +1136,7 @@ function run(str, lang, argv, fn){
 		argvcpt.__.fixed = 1;
 		newenv(_do, lang, function(env){
 			progl2cpt("{"+str+"\n}", env.__.dic, function(maincpt){
-				var newcall = newcpt([env.main, newcpt([maincpt], "Array", env.__.dic)], "Call", env.__.dic);
+				var newcall = newcpt([env.main, newcpt([maincpt], "Array", env.__.dic)], "Call", env.__.dic);			
 				exec(newcall, env, function(rtn){
 					fn(rtn);
 				})

@@ -2,7 +2,7 @@
  global.indent = "  ";
  global.brch = idglobal("_out");
  global.postfix = ".sl";
- global.varprefix = ""; 
+ global.varprefix = "";
  $x = noexec(mainblock)
  $mainstr = gen(x, 1);
  $str = sgen("main", [mainstr]);
