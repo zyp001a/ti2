@@ -61,6 +61,15 @@ case "jsa":
 //		console.log(rtn);
 	});	
 	break;
+case "jssl":
+	var	tfile = process.argv[3];	
+	var str = fs.readFileSync(tfile).toString();
+	var brchstr = "_gen/_nodejssl"
+	progl.run(str, brchstr, argv, function(rtn){
+//		console.log("FINAL");
+//		console.log(rtn);
+	});	
+	break;
 case "c":
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();

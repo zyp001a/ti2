@@ -8,6 +8,7 @@ var ~=k~ = require("~=k~");
 ~each($k, $v, global.eximports, {~
 var ~=k~ = require("~=k~");
 ~})~
+~=sgen("predefined", [])~
 ~=genlines(deps)~
 process.argv.shift();
 var _argv = process.argv;

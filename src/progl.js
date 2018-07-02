@@ -210,7 +210,7 @@ var its = {
       var tl = gettype(l);
       var tr = gettype(r);
       if(tl != tr) return this.fn(0);      
-      if(tl == "Class") return this.fn(l.__.path == r.__.path);
+      if(tl == "Dic") return this.fn(l.__.path == r.__.path);
     }else{
 		  this.fn(l==r);
     }
@@ -296,6 +296,7 @@ var its = {
     }
     fn(x)
   },
+
 }
 function copy(cpt){
 	var t = gettype(cpt);
@@ -481,6 +482,16 @@ function execcall(cpt, env, fn){
 		});
 	});
 }
+function newrels(rels){
+	rels.__= {
+		type: "Rels",
+	}	
+	Object.defineProperty(rels, '__', {
+		enumerable: false,
+		configurable: false
+	});	
+	return rels;
+}
 function newcpt(val, type, dic, name){
 	if(typeof val != "object") return val;
 	var c = val.__ = {length: val.length || 0};
@@ -489,7 +500,7 @@ function newcpt(val, type, dic, name){
 		configurable: false
 	});
 	c.type = type || "Dic";
-	c.rels = {};
+	c.rels = newrels({});
 	if(dic){
 		if(!name){
 			name = hashlen(dic).toString();
@@ -624,11 +635,13 @@ function cpt2str(cpt){
 		return "Class: "+cpt.__.name;    
 	case "Function":
 		return "Function: "+cpt.__.path;
+	case "Rels":
+		return "Rels";
   case "Argdef":
 //    log(cpt)
     return "Argdef";
 	default:
-		die(t)
+		die(t + "unknow for cpt2str")
 	}
 	
 }
@@ -713,7 +726,7 @@ function ast2cpt(ast, dic, fn){
 		break;	
 	case "tpl":
 		var newdic = newcpt({}, "Dic", dic);
-    newdic.execd = 1;
+    newdic.__.execd = 1;
     var toeval;
     if(e == ""){
       toeval = ""
@@ -897,7 +910,7 @@ function getfinalnew(dic, key, config, fn){
 	if(!config.notnew){
 		if(config.notaddr){
 			var newc = newcpt({}, "Dic", dic, key);
-      newc.execd = 1;
+      newc.__.execd = 1;
 			fn(newc);
 		}else{
 			dic[key] = undefined;
@@ -1031,6 +1044,7 @@ function execarray(cpt, env, fn){
 	}
   if(cpt.__.execd) return fn(cpt)
 	var ncpt = newcpt([], "Array", env.$._dic);
+	ncpt.__.rels = cpt.__.rels	
 	utils.eachsync(Object.keys(cpt), function(k, fnsub){
 		var c = cpt[k];
 		exec(c, env, function(rtn){
@@ -1048,6 +1062,7 @@ function execdic(cpt, env, fn){
 	}
   if(cpt.__.execd) return fn(cpt)  
 	var ncpt = newcpt({}, "Dic", env.$._dic);
+	ncpt.__.rels = cpt.__.rels
 	utils.eachsync(Object.keys(cpt), function(k, fnsub){
 		var c = cpt[k];
 		exec(c, env, function(rtn){
