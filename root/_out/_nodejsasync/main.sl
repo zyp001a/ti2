@@ -11,5 +11,8 @@ var ~=k~ = require("~=k~");
 ~=genlines(deps)~
 process.argv.shift();
 var _argv = process.argv;
-~=$_0~
+async function main(){
+~=indent($_0, 1)~
+}
+main();
 `

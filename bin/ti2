@@ -17,11 +17,12 @@ case "r":
 	var	tfile = process.argv[3];
 	var str = fs.readFileSync(tfile).toString();
 	var brchstr = process.argv[4];
+	var natl = require("../src/natl");
 	if(!brchstr) brchstr = "_natl";
-	progl.run(str, brchstr, argv, function(rtn){
+	natl.run(str, brchstr, argv, function(rtn){
 //		console.log("FINAL");
 //		console.log(rtn);
-	});	
+	});
 case "run":
 	var	tfile = process.argv[3];
 	var str = fs.readFileSync(tfile).toString();
@@ -46,6 +47,15 @@ case "js":
 	var	tfile = process.argv[3];	
 	var str = fs.readFileSync(tfile).toString();
 	var brchstr = "_gen/_nodejs"
+	progl.run(str, brchstr, argv, function(rtn){
+//		console.log("FINAL");
+//		console.log(rtn);
+	});	
+	break;
+case "jsa":
+	var	tfile = process.argv[3];	
+	var str = fs.readFileSync(tfile).toString();
+	var brchstr = "_gen/_nodejsasync"
 	progl.run(str, brchstr, argv, function(rtn){
 //		console.log("FINAL");
 //		console.log(rtn);
