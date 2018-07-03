@@ -6,7 +6,7 @@ var ~=k~ = require("~=k~");
 var ~=k~ = require("~=k~");
 ~})~
 ~each($k, $v, global.eximports, {~
-var ~=k~ = require("~=k~");
+var ~=k~ = require("./~=k~");
 ~})~
 ~=sgen("predefined", [])~
 ~=genlines(deps)~

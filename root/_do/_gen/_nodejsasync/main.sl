@@ -5,7 +5,7 @@
  global.varprefix = "_";
  global.imports = <>
  global.eximports = <> 
- global.packages = <> 
+ global.packages = <>
  $x = noexec(mainblock)
  $mainstr = gen(x, 1);
  $str = sgen("main", [mainstr]);

@@ -587,7 +587,12 @@ rootdic.__.fixed = 1;
 rootdic.__.execd = 1;
 
 function progl2cpt(str, dic, fn){
-	var ast = parser.parse(str);
+	var ast
+//	try{
+		ast = parser.parse(str);
+//	}catch(e){
+//		die(str);
+//	}
 	ast2cpt(ast, dic, function(cpt){
 		fn(cpt);
 	});
@@ -960,11 +965,14 @@ function get(dic, key, config, fn){
 						var c = cpt.__;
 						c.dic = dic;
 						c.name = key;
-						c.path = dic.__.path + "/" + key;
+						c.path = dic.__.path + "/" + key.replace(/([^_])_/, "$1/");
 						c.fixed = 1;
 						if(c.native){
 							c.native = its[key];
 							cpt[0].__.native = key;
+						}
+						if(c.type == "Function" && cpt[0].length == 0 && !c.native){
+							log("not impl: "+c.path);
 						}
             if(gettype(cpt) == "Function")
 						  cpt[0].__.name = key;                          
@@ -1171,6 +1179,8 @@ function run(str, lang, argv, fn){
 		_do = dic;
 		var argvcpt = newcpt(argv, "Array", _do, "argv");
 		argvcpt.__.fixed = 1;
+		var envcpt = newcpt([__dirname + "/../root"], "String", _do, "env");
+		envcpt.__.fixed = 1;
 		newenv(_do, lang, function(env){
 			progl2cpt("{"+str+"\n}", env.__.dic, function(maincpt){
 				var newcall = newcpt([env.main, newcpt([maincpt], "Array", env.__.dic)], "Call", env.__.dic);			

@@ -1,2 +1,2 @@
-@=>(x, k:String, conf){
+@=>(e:Dic, k:String){
 }
