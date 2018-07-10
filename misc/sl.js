@@ -1,10 +1,10 @@
 function reg(){
 }
-async function id(){
+function id(){
 }
-async function idf(){
+function idf(){
 }
-async function idg(){
+function idg(){
 }
 module.exports = {
 	id: id,

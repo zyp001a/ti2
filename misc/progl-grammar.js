@@ -95,7 +95,7 @@ var grammar = {
 		["left", "(", ")", "[", "]", "{", "}"],		 
 	],
   "start": "Start",
-//	"parseParams": ["m"],
+	"parseParams": ["scope"],
   "bnf": {
 		"Start": [
 			["Elem", "return $$ = $1"],
@@ -109,34 +109,32 @@ var grammar = {
 			["Tpl", "$$ = tpl($1)"],
 		],
 		"Dynamic": [
-			["Function", "$$ = $1"],
-			["& Function", "$$ = await async($1)"],						
-			["Array", "$$ = await arrDef($1)"],
-			["Dic", "$$ = await dicDef($1)"],			
-			["Scope", "$$ = await scopeDef($1)"],
+			["Function", "$$ = funcDef($1)"],
+			["Array", "$$ = arrDef($1)"],
+			["Dic", "$$ = dicDef($1)"],
+			["Struct", "$$ = structDef($1)"],
 		],
 		"Mid": [
-			["Addr", "$$ = $1"],			
-			["Block", "$$ = await block($1)"],
+			["Addr", "$$ = $1"],
+			["Block", "$$ = block($1)"],
 			["Call", "$$ = $1"],
-			["& Call", "$$ = await waitcall($2)"],			
 			["Op", "$$ = $1"],
 			["Get", "$$ = $1"],
 			["Assign", "$$ = $1"],
 			["Return", "$$ = $1"],			
 		],
 		"Return": [
-			["~ Elem", "$$ = await call(await idf('return'), [$2])"],						
+			["~ Elem", "$$ = call(idf('return'), [$2])"],						
 		],
 		Addr: [
-			["Id", "$$ = await id($1)"],
+			["Id", "$$ = id($1)"],
 			["Reg", "$$ = reg($1)"],
 		],		
 		"Elem": [
 			["Static", "$$ = $1"],
 			["Dynamic", "$$ = $1"],
 			["Rels Dynamic", "$$ = rels($2, $1)"],
-			["Rels", "$$ = rels($1)"],			
+			["Rels", "$$ = scopeDef($1)"],			
 			["Mid", "$$ = $1"],
 			["| Elem |", "$$ = keep($2)"],
 			["( Elem )", "$$ = $2"],
@@ -188,8 +186,8 @@ var grammar = {
 			["Id FunctionBody", "$$= $2; $$[3] = $1"]
 		],
 		"FunctionBody": [
-			["=> Block", "$$ = [await block($2)]"],//block in out
-			["=> Funcarg Block", "$$ = [await block($3), await funcarg($2)]"],
+			["=> Block", "$$ = [$2]"],//block in out
+			["=> Funcarg Block", "$$ = [$3, $2]"],
 		],
 		"Funcarg": [
 			["( )", "$$= [[]]"],
@@ -211,23 +209,23 @@ var grammar = {
 			["Id Rels", "$$ = $1"],//TODO realtype
 		],
 		"Call": [
-			["Addr ( )", "$$ = await call($1, []);"],
-			["Addr ( Elems )", "await call($1, $3);"],
-			["Get ( )", "$$ = await call($1, []);"],
-			["Get ( Elems )", "$$ = await call($1, $3);"],
-			["Call ( )", "$$ = await call($1, []);"],
-			["Call ( Elems )", "$$ = await call($1, $3);"],
+			["Addr ( )", "$$ = call($1, []);"],
+			["Addr ( Elems )", "call($1, $3);"],
+			["Get ( )", "$$ = call($1, []);"],
+			["Get ( Elems )", "$$ = call($1, $3);"],
+			["Call ( )", "$$ = call($1, []);"],
+			["Call ( Elems )", "$$ = call($1, $3);"],
 		],
 		"Assign": [
-			["Elem = Elem", "$$ = await assign($3, $1)"],
-			["Elem -= Elem", "$$ = await assign(await op('minus', [$1, $3]), $1)"],
+			["Elem = Elem", "$$ = assign($3, $1)"],
+			["Elem -= Elem", "$$ = assign(op('minus', [$1, $3]), $1)"],
 			["Elem --", "$$ = [['call', [ ['id', 'minus'], [$1,  ['obj', 'Int', 1] ] ] ], $1]"],			
 			["Elem *= Elem", "$$ = [['call', [ ['id', 'times'], [$1, $3] ] ], $1]"],
 		  ["Elem /= Elem", "$$ = [['call', [ ['id', 'obelus'], [$1, $3] ] ], $1]"],
 
-			["Elem ?= Elem", "$$ = await op('default', [$3, $1])"],      
-			["Elem += Elem", "$$ = await op('concat', [$3, $1])"],      
-			["Elem ++", "$$ = await op('concat', [1, $1])"], 			
+			["Elem ?= Elem", "$$ = op('default', [$3, $1])"],      
+			["Elem += Elem", "$$ = op('concat', [$3, $1])"],      
+			["Elem ++", "$$ = op('concat', [1, $1])"], 			
 		],
 		"Op": [
 			["! Elem", "$$ = [['id', 'not'], [$2]]"],
@@ -255,10 +253,8 @@ var grammar = {
     "Dic": [
       ["@ { }", "$$ = {}"],
       ["@ { NElems }", "$$ = $3"],
-      ["@ [ ]", "$$ = {}"],
-      ["@ [ NElems ]", "$$ = $3"],			
     ],
-    "Class": [
+    "Struct": [
       ["@ [ ]", "$$ = {}"],
       ["@ [ NElems ]", "$$ = $3"],
     ],
@@ -266,7 +262,7 @@ var grammar = {
 };
 var options = {};
 var code = new jison.Generator(grammar, options).generate();
-console.log("var sl = require('./sl')");
-console.log("for(var k in sl){global[k] = sl[k]}");
-console.log(code.replace(/function ([^P][^\)]*)\(/g, "async function $1("));
+var filename = process.argv[2];
+fs.writeFileSync(filename, "var sl = require('./sl');for(var k in sl){global[k] = sl[k]};"+code);
+
 
