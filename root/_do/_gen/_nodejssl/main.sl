@@ -1,10 +1,13 @@
 =>{
  global.indent = "  ";
- global.brch = idglobal("_out/_nodejssl");
+ global.brch = idg("_out/_nodejssl");
  global.postfix = ".js";
  global.varprefix = "_";
  global.imports = <>
- global.eximports = <> 
+ global.eximports = <>
+ global.eximports["proglparser"] = =>{
+  system("node "+env[0]+ "/../misc"+"/progl-grammar.js proglparser.js")
+ } 
  global.packages = <> 
  $x = noexec(mainblock)
  $mainstr = gen(x, 1);

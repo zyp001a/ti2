@@ -1,6 +1,6 @@
 =>{
  global.indent = "  ";
- global.brch = idglobal("_out/_python36");
+ global.brch = idg("_out/_python36");
  global.postfix = ".py";
  global.varprefix = "_";
  global.imports = <> 

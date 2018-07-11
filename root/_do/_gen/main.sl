@@ -1,6 +1,6 @@
 =>{
  global.indent = "  ";
- global.brch = idglobal("_out");
+ global.brch = idg("_out");
  global.postfix = ".sl";
  global.varprefix = "";
  $x = noexec(mainblock)

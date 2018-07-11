@@ -5,7 +5,9 @@ var ~=k~ = require("~=k~");
 ~each($k, $v, global.packages, {~
 var ~=k~ = require("~=k~");
 ~})~
-~each($k, $v, global.eximports, {~
+~each($k, $v, global.eximports, {
+ if(type(v) == "Function", call(v, []))
+~
 var ~=k~ = require("./~=k~");
 ~})~
 ~=sgen("predefined", [])~

@@ -95,7 +95,7 @@ var grammar = {
 		["left", "(", ")", "[", "]", "{", "}"],		 
 	],
   "start": "Start",
-	"parseParams": ["scope"],
+	"parseParams": ["xp"],
   "bnf": {
 		"Start": [
 			["Elem", "return $$ = $1"],
@@ -106,17 +106,17 @@ var grammar = {
 			["Int", "$$ = Number($1)"],
 			["String", "$$ = $1"],
 			["Undefined", "$$ = undefined"],
-			["Tpl", "$$ = tpl($1)"],
+			["Tpl", "$$ = xp('tpl', $1)"],
 		],
 		"Dynamic": [
-			["Function", "$$ = funcDef($1)"],
-			["Array", "$$ = arrDef($1)"],
-			["Dic", "$$ = dicDef($1)"],
-			["Struct", "$$ = structDef($1)"],
+			["Function", "$$ = xp('func', $1)"],
+			["Array", "$$ = xp('arr', $1)"],
+			["Dic", "$$ = xp('dic', $1)"],
+			["Struct", "$$ = xp('struct', $1)"],
 		],
 		"Mid": [
 			["Addr", "$$ = $1"],
-			["Block", "$$ = block($1)"],
+			["Block", "$$ = xp('block', xarr($1))"],
 			["Call", "$$ = $1"],
 			["Op", "$$ = $1"],
 			["Get", "$$ = $1"],
@@ -124,19 +124,19 @@ var grammar = {
 			["Return", "$$ = $1"],			
 		],
 		"Return": [
-			["~ Elem", "$$ = call(idf('return'), [$2])"],						
+			["~ Elem", "$$ = xp('call', xp('idf', 'return'), xarr([$2]))"],
 		],
 		Addr: [
-			["Id", "$$ = id($1)"],
-			["Reg", "$$ = reg($1)"],
+			["Id", "$$ = xp('id', $1)"],
+			["Reg", "$$ = xp('reg', $1)"],
 		],		
 		"Elem": [
 			["Static", "$$ = $1"],
 			["Dynamic", "$$ = $1"],
-			["Rels Dynamic", "$$ = rels($2, $1)"],
-			["Rels", "$$ = scopeDef($1)"],			
+			["Rels Dynamic", "$$ = xp('rels', $2, $1)"],
+			["Rels", "$$ = xp('scope', $1)"],			
 			["Mid", "$$ = $1"],
-			["| Elem |", "$$ = keep($2)"],
+			["| Elem |", "$$ = xp('keep', $2)"],
 			["( Elem )", "$$ = $2"],
 		],
     String:[
@@ -147,12 +147,12 @@ var grammar = {
 			["Relstr", "$$ = $1.split(/\\s+/)"]
 		],
 		"Get": [
-			["Addr . Id", "$$ = scopeGet($1, $3)"],
-			["Addr [ Elem ]", "$$ = addrGet($1, $3)"],
-			["Get . Id", "$$ = scopeGet($1, $3)"],
-			["Get [ Elem ]", "$$ = addrGet($1, $3)"],
-			["( Elem ) . Id", "$$ = scopeGet($2, $5)"],
-			["( Elem ) [ Elem ]", "$$ = addrGet($2, $5)"],
+			["Addr . Id", "$$ = xp('xget', $1, $3)"],
+			["Get . Id", "$$ = xp('xget', $1, $3)"],
+			["( Elem ) . Id", "$$ = xp('xget', $2, $5)"],
+			["Addr [ Elem ]", "$$ = xp('get', $1, $3)"],			
+			["Get [ Elem ]", "$$ = xp('get', $1, $3)"],			
+			["( Elem ) [ Elem ]", "$$ = xp('get', $2, $5)"],
 		],
 		"Block": [
 			["{ }", "$$= []"],
@@ -209,12 +209,13 @@ var grammar = {
 			["Id Rels", "$$ = $1"],//TODO realtype
 		],
 		"Call": [
-			["Addr ( )", "$$ = call($1, []);"],
-			["Addr ( Elems )", "call($1, $3);"],
-			["Get ( )", "$$ = call($1, []);"],
-			["Get ( Elems )", "$$ = call($1, $3);"],
-			["Call ( )", "$$ = call($1, []);"],
-			["Call ( Elems )", "$$ = call($1, $3);"],
+			["Addr CallArgs", "$$ = xp('call', $1, $2);"],
+			["Get CallArgs", "$$ = xp('call', $1, $2);"],
+			["Call CallArgs", "$$ = xp('call', $1, $2);"],
+		],
+		"CallArgs": [
+			["( )", "$$ = xp('arr', [])"],
+			["( Elems )", "$$ = xp('arr', $2)"]
 		],
 		"Assign": [
 			["Elem = Elem", "$$ = assign($3, $1)"],
@@ -263,6 +264,6 @@ var grammar = {
 var options = {};
 var code = new jison.Generator(grammar, options).generate();
 var filename = process.argv[2];
-fs.writeFileSync(filename, "var sl = require('./sl');for(var k in sl){global[k] = sl[k]};"+code);
+fs.writeFileSync(filename, code);
 
 

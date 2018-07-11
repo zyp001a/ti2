@@ -151,6 +151,7 @@ var its = {
 		progl2cpt(input, brch, this.fn);
 	},
 	getp: function(cpt, k){
+		if(cpt == undefined) die("getp cpt undefined, "+k)
 		this.fn(cpt.__[k])
 	},
 	setp: function(cpt, k, v){
@@ -167,7 +168,7 @@ var its = {
 			fn(addr);
 		})		
 	},
-	idglobal: function(s){
+	idg: function(s){
 		var fn = this.fn;
 		get(rootdic, s, {local:1, notaddr:1}, function(cpt){
 			fn(cpt);
@@ -344,7 +345,6 @@ function copy(cpt){
 	ncpt.__ = {};		
 	Object.defineProperty(ncpt, '__', {
 		enumerable: false,
-		configurable: false
 	});
 	for(var k in cpt.__){
 		ncpt.__[k] = cpt.__[k]
@@ -497,7 +497,6 @@ function newcpt(val, type, dic, name){
 	var c = val.__ = {length: val.length || 0};
 	Object.defineProperty(val, '__', {
 		enumerable: false,
-		configurable: false
 	});
 	c.type = type || "Dic";
 	c.rels = newrels({});
@@ -960,6 +959,7 @@ function get(dic, key, config, fn){
 		currfile = dic.__.path+"/"+key;
 		db.get(dic.__.path+"/"+key, function(str){
 			if(str){
+				dic[key] = newcpt([], "Array");				
 				progl2cpt(str, dic, function(cpt){
 					utils.ifsync(typeof cpt == "object", function(fnsub2){
 						var c = cpt.__;
@@ -985,7 +985,17 @@ function get(dic, key, config, fn){
 							fnsub2()
 						});
 					}, function(){
-						dic[key] = cpt;
+						if(typeof cpt !="object"){
+							dic[key] = cpt;
+						}else{
+							for(var i in cpt){
+								dic[key][i] = cpt[i];
+							}
+							dic[key].__ = cpt.__;
+							Object.defineProperty(dic[key], '__', {
+								enumerable: false,
+							});
+						}
 						fnsub(1);
 					});
 				});

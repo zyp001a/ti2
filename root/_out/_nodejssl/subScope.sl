@@ -1,0 +1,1 @@
+`await scopeGet(~=$_0[0]~)`

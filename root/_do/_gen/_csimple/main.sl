@@ -1,6 +1,6 @@
 =>{
  global.indent = "  ";
- global.brch = idglobal("_out/_csimple");
+ global.brch = idg("_out/_csimple");
  global.postfix = ".c";
  global.varprefix = "_";
  global.mods = <>  

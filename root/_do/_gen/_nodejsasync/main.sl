@@ -1,6 +1,6 @@
 =>{
  global.indent = "  ";
- global.brch = idglobal("_out/_nodejsasync");
+ global.brch = idg("_out/_nodejsasync");
  global.postfix = ".js";
  global.varprefix = "_";
  global.imports = <>
