@@ -5,6 +5,7 @@ var parser = require("./progl-parser");
 var tpl = require("./tpl-parser");
 var db = require("./db");
 var fs = require("./fs");
+var fss = require("fs");
 var system = require('child_process').exec;
 var currfunc;
 var currfile;
@@ -61,6 +62,9 @@ var its = {
 	},
 	read: function(fd, buffer, offset, length, position){
 		this.fn();
+	},
+	readfile: function(f){
+		this.fn(fss.readFileSync(f).toString())
 	},
 	match: function(str, reg, op){		
 		var r = new RegExp(reg, op)
