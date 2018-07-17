@@ -50,12 +50,26 @@ function getStackTrace(){
 
 var root = newCpt();
 var astCpt = newCpt(root);
-newCpt(root, "Undf", {default: undefined}),			
-newCpt(root, "Num", {default: 0}),
-newCpt(root, "Str", {default: ""}),	
-newCpt(root, "Arr", {default: []}),
-newCpt(root, "Dic", {default: {}}),
-newCpt(root, "Func", {default: (self) => { return function(){} }}),
+newCpt(root, "Undf", {
+  default: undefined
+  
+}),
+newCpt(root, "Num", {
+  default: 0,
+  
+}),
+newCpt(root, "Str", {
+  default: ""
+}),	
+newCpt(root, "Arr", {
+  default: []
+}),
+newCpt(root, "Dic", {
+  default: {}
+}),
+newCpt(root, "Func", {
+  default: (self) => { return function(){} }
+}),
 newCpt(root, "Cpt", {default: (self) => { return newCpt(self.cpt) }}),
 newCpt(root, "Obj"),
 newCpt(root, "Call", {
