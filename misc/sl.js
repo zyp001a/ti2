@@ -48,35 +48,55 @@ function getStackTrace(){
   return obj.stack.toString().replace("[object Object]\n","");
 }
 
-var root = newCpt();
-var astCpt = newCpt(root);
-newCpt(root, "Undf", {
+var root = scopeNew();
+var astScope = scopeNew(root);
+classNew(root, "Class"),
+classNew(root, "Undf", {
   default: undefined
-  
 }),
-newCpt(root, "Num", {
+classNew(root, "Num", {
   default: 0,
-  
 }),
-newCpt(root, "Str", {
-  default: ""
+classNew(root, "Int", {
+	parent: [root.Num],
+  default: 0,
+}),
+classNew(root, "Str", {
+  default: "",
 }),	
-newCpt(root, "Arr", {
+classNew(root, "Arr", {
   default: []
 }),
-newCpt(root, "Dic", {
+classNew(root, "Dic", {
   default: {}
 }),
-newCpt(root, "Func", {
-  default: (self) => { return function(){} }
+classNew(root, "Func", {
+  default: function(){} 
 }),
-newCpt(root, "Cpt", {default: (self) => { return newCpt(self.cpt) }}),
-newCpt(root, "Obj"),
-newCpt(root, "Call", {
+classNew(root, "Obj"),
+classNew(root, "Call", {
 	schema:{
 		func: root.Func,
 		args: root.Arr,
 	}
+})
+classNew(root, "ArrCall", {
+	parent: [root.Arr],
+	element: root.Call,
+})
+classNew(root, "Addr", {
+	schema:{
+		lexScope: root.Scope,
+		args: root.Arr,
+		level: root.Int
+	}
+})
+classNew(root, "Stack", {
+  default: []	
+})
+funcNew(root, "Stack_pop", {
+})
+funcNew(root, "Stack_push", {
 })
 
 //parser function
@@ -100,7 +120,9 @@ function copy(item){
   return result || item;
 }
 //internal function
-function newObj(cpt, proto){
+						function funcNew(){
+						}
+function objNew(scope, proto){
 	for(var k in cpt.default){
 		if(!haskey(proto, k))
 			proto[k] = copy(cpt.default[k])
@@ -111,60 +133,52 @@ function newObj(cpt, proto){
 	}
 	proto.__ = cpt;
 }
-function newCpt(cpt, name, conf){
+function scopeNew(pscope, name, parent){
 	var proto = {};
-	var x = proto.__ = conf || {};
-	conf.cpt = cpt;
+	var x = proto.__ = {parent: pscope};
 	Object.defineProperty(proto, '__', {
 		enumerable: false,
 		configurable: false
 	});
 	x.index = 0;
   x.name = name;
-	if(!cpt){ //isroot
+	if(!pscope){ //isroot
 	  x.id = "root";
 	}else{
   	if(name == undefined){
-  	  name = cpt.__.index.toString();
-  		cpt.__.index++;
+  	  name = pscope.__.index.toString();
+  		pscope.__.index++;
   	}	
-  	if(!cpt.__.pcpt){	//parent isroot
+  	if(!pscope.__.parent){	//parent isroot
   		x.id = name;	  
   	}else{
-  		x.id = cpt.__.path + "_" + name;
+  		x.id = pscope.__.path + "_" + name;
   	}
 	}
-	cpt[name] = proto;
+	pscope[name] = proto;
 	return proto;
 }
-async function getCpt(cpt, key){
-  if(haskey(cpt, key)){
-    return cpt[key];
+function classNew(scope, name, conf){
+	var p = scope[name] = conf || {}
+	p.__ = [root.Class]
+	return p;
+}
+async function scopeGet(scope, key){
+  if(haskey(scope, key)){
+    return scope[key];
   }
-	let str = await dbGet(cpt.__.id, key)
+	let str = await dbGet(scope.__.id, key)
 	if(str){
-		var scpt = cpt
 		//TODO key match _, get subcpt		
-		setCpt(cpt, key, progl2elem(str, scpt));
+		scopeSet(scope, key, progl2elem(str, scope));
 	}
 	return undefined
 }
-async function setCpt(cpt, key, val){
-	var t = stype(val);
-	if(t == "CptDef"){
-		var ncpt = newCpt(cpt, key);
-		ncpt.__.rels = val.val;
-	}else if(t == "FuncDef"){
-		cpt[key] = val;
-	}
+async function scopeSet(cpt, key, val){
+	cpt[key] = val;
 }
+
 function type(e){
-	var st = stype(e);
-	if(st == "Obj")
-		return e.__.__.id;
-	return st;
-}
-function stype(e){
 	switch(typeof e){
   case "boolean":
     return "Num";
@@ -180,7 +194,7 @@ function stype(e){
 		if(!x) return "Dic";
 		if(x.enumerable == true)
 			return "Obj";
-		return "Cpt";
+		return "Scope";
 	case "function":
 		return "Func"
   default:
@@ -191,12 +205,12 @@ function haskey(x, k){
   return Object.getOwnPropertyDescriptor(x, k);
 }
 async function exec(cpt, env){
-	var t = stype(cpt);
+	var t = type(cpt);
 	switch(t){
 		
 	}
 }
-async function dbget(id, sname){
+async function dbGet(id, sname){
   return "";
 }
 async function progl2elem(str, cpt){
