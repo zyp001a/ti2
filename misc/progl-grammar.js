@@ -3,8 +3,6 @@ var fs = require("fs");
 var grammar = {
   "lex": {
     "macros": {
-      "digit": "0-9",
-			"letter": "a-zA-Z_",
       "int": "-?(?:[0-9]|[1-9][0-9]+)",
       "esc": "\\\\",			
       "exp": "(?:[eE][-+]?[0-9]+)",
@@ -19,14 +17,14 @@ var grammar = {
 			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\`/g, '`'); return 'TPL';"],
 			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"|`(\\\\.|[^\\\\`])*`",
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t'; return n;}); return 'STR';"], 
-			["\<[{letter}{digit}\\\/\\s]*\>",
+			["\<[a-zA-Z0-9_\\\/\\s]*\>",
        "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'NATL';"],
       ["\\\\[\\r\\n;]+", "return"],//allow \ at end of line
 			["\\b\\_\\b", "return 'UNDF'"],
-			["$?[{letter}]([{letter}{digit}])*", "return 'ID'"],
+			["\\$?[a-zA-Z_][a-zA-Z0-9_]*", "return 'ID'"],
 //TODO bignumber
       ["{int}{frac}?{exp}?u?[slbf]?\\b", "return 'NUM';"],
-      ["0[xX][a-zA-Z0-9]+\\b", "return 'INT';"],
+      ["0[xX][a-zA-Z0-9]+\\b", "return 'NUM';"],
 			["\\=\\>", "return '=>'"],
 			["\\-\\>", "return '->'"], 
       ["\\(", "return '('"],
@@ -76,6 +74,7 @@ var grammar = {
 		["left", ","],
     ["right", "??", "::", "?", ":"],				
     ["right", "=", "+=", "-=", "*=", "/=", "?="],
+    ["left", "++", "--"],		
     ["left", "||"],		
     ["left", "&&"],		
 		["left", "==", "!="],
@@ -112,7 +111,6 @@ var grammar = {
 			"Get",
 			"Op",
 			"Assign",
-			"Block",
 			["( Expr )", "$$ = $2"]
 			
 		],		
@@ -130,10 +128,6 @@ var grammar = {
       ["{ }", "$$ = ['dic', {}]"],
       ["{ Elems }", "$$ = ['dic', $3]"],
     ],
-		"Block": [
-			["{ }", "$$= []"],
-			["{ Exprs }", "$$ = $3"],
-		],		
 		Id: [
 			["ID", "$$ = ['id', $1]"],
 			["ID :: ID", "$$ = ['local', $1, $3]"],
@@ -147,23 +141,29 @@ var grammar = {
 		],
 		"Ctrl": [
 			["@ ID ", "$$ = ['ctrl', $1]"],
-			["@ ID Expr", "$$ = ['ctrl', $1, $2]"],
-			["@ ID Expr", "$$ = ['ctrl', $1, $2]"],						
+			["@ ID Exprs ", "$$ = ['ctrl', $1, $2]"],						
 		],		
 		Natl: "$$ = ['natl', $1.split(/\\s+/)]",
-		"KeyColon": [
+		KeyColon: [
 			["ID :", "$$ = $1"],
 			["STR :", "$$ = $1"],
 			["NUM :", "$$ = $1"],
 		],
-		"Elems": [
+		Elems: [
       [",", "$$ = [];"],			
       ["Elem", "$$ = [$1];"],
       [", Elem", "$$ = [$2];"],			
       ["Elems , Elem", "$$ = $1; $1.push($3);"],
 			["Elems ,", "$$ = $1"],			//allow additional ,;
 		],		
-		"Get": [
+		Exprs: [
+      [",", "$$ = [];"],			
+      ["Expr", "$$ = [$1];"],
+      [", Expr", "$$ = [$2];"],			
+      ["Exprs , Expr", "$$ = $1; $1.push($3);"],
+			["Exprs ,", "$$ = $1"],			//allow additional ,;
+		],		
+		Get: [
 			["Id . Id", "$$ = ['get', $1, $3]"],
 			["Get . Id", "$$ = ['get', $1, $3]"],
 			["( Expr ) . Id", "$$ = ['get', $2, $5]"],
@@ -180,9 +180,8 @@ var grammar = {
 		"Args": [
 			["( )", "$$= [[]]"],
 			["( Subdefs )", "$$= [$2]"],
-			["( Subdefs ~ Type)", "$$= [$2, $4]"],
-			["( ~ Type )", "$$= [[], $3]"],
-//			["Subdef", "$$=[$1]"]
+			["( Subdefs ~ ID)", "$$= [$2, $4]"],
+			["( ~ ID )", "$$= [[], $3]"],
 		],
     "Subdefs": [
       ["Subdef", "$$ = [$1]; "],
@@ -192,18 +191,14 @@ var grammar = {
 			["Id", "$$ = [$1]"],
 			["KeyColon Type", "$$ = [$1, $2]"],
 		],
-		"Type": [
-			["Id", "$$ = $1"],
-			["Id Rels", "$$ = $1"],//TODO realtype
-		],
 		"Call": [
 			["Id CallArgs", "$$ = ['call', $1, $2];"],
 			["Get CallArgs", "$$ = ['call', $1, $2];"],
 			["Call CallArgs", "$$ = ['call', $1, $2];"],
 		],
 		"CallArgs": [
-			["( )", "$$ = ['arr', []]"],
-			["( Exprs )", "$$ = ['arr', $2]"]
+			["( )", "$$ = []"],
+			["( Exprs )", "$$ = $2"]
 		],
 		"Assign": "$$ = ['assign', $1]",
 		"ASSIGN": [
@@ -248,7 +243,7 @@ for(var k in grammar.bnf){
 	for(var k2 in v){
 		var v2 = v[k2];
 		if(typeof v2 == "string"){
-			v[k2] = [v2, "$$ = [$1"];
+			v[k2] = [v2, "$$ = $1"];
 		}
 	}
 }
