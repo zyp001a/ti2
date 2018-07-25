@@ -237,7 +237,7 @@ var grammar = {
 for(var k in grammar.bnf){
 	var v = grammar.bnf[k];
 	if(typeof v == "string"){
-		grammar.bnf[k] = [k.toUpperCase(), v]
+		grammar.bnf[k] = [[k.toUpperCase(), v]]
 		continue;
 	}
 	for(var k2 in v){

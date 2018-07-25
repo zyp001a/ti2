@@ -1,1 +1,1 @@
-`await scopeGetOrNew(definesp, ~=$_0[0]~)`
+`await scopeGetOrNew(def, ~=$_0[0]~)`
