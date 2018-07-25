@@ -50,9 +50,7 @@ function getStackTrace(){
 
 var root = scopeNew();
 var execsp = scopeNew(root, "exec");
-execsp.__.ns = "exec";
 var def = scopeNew(root, "def");
-def.__.ns = "def";
 var astScope = scopeNew(def);
 classNew(def, "Class")
 classNew(def, "Obj")
@@ -104,17 +102,19 @@ classNew(def, "FuncBlock", {
     argdef: def.Argdef,
   }
 });
-classNew(def, "Stack", {
-  default: []
-})
+
 funcNew(def, "log", function(s){
 	console.log(s);
 }, [["s"]])
+funcNew(def, "state", function(){
+	var self = this;
+	return self.state;
+})
 var execarg = [["o"], ["s"], ["e"], ["x"]];
 funcNew(execsp, "Call", async function(o, s, e, x){
   var func = await exec(o.func, s, e, x);
   var args = await exec(o.args, s, e, x);
-  return await call(func, args);
+  return await call(func, args, x);
 }, execarg)
 funcNew(execsp, "Arr$elementCallable", async function(o, s, e, x){
 	var arrx = [];
@@ -129,7 +129,6 @@ funcNew(execsp, "Raw", function(o, s, e, x){
 funcNew(execsp, "Class", function(o, s, e, x){
 	return o;
 }, execarg)
-
 //parser function
 function valCopy(item){
   let result = undefined;
@@ -148,6 +147,12 @@ function valCopy(item){
     }
   }
   return result || item;
+}
+function callNew(func, args){
+	return objNew(def.Call, {
+		func: func,
+		args: args
+	});
 }
 //internal function
 function funcNew(scope, name, func, argdef){
@@ -178,7 +183,7 @@ function extname(conf){
 	for(var k in conf){
 		r+=k;
 		var v = conf[k];
-		switch(valType(v)){
+		switch(rawType(v)){
 		case "Class":
 			r+=v.__.id.replace("_", "");
 			break;
@@ -189,7 +194,7 @@ function extname(conf){
 			r+=v;
 			break;
 		default:
-			die("TODO: "+valType(v))					
+			die("TODO: "+rawType(v))					
 		}
 	}
 	return r;
@@ -209,13 +214,16 @@ function route(pscope, name, p){
 	x.name = name;	
 	
   if(!pscope.__.id){	//parent isroot
-		x.id = "."
+		x.id = ".";
+		x.ns = name;
   }else if(pscope.__.id == "."){	//grandparent is root
   	x.id = name;
+		x.ns = pscope.__.ns;		
   }else{
   	x.id = pscope.__.id + "_" + name;
+		x.ns = pscope.__.ns;				
   }
-	x.ns = pscope.__.ns;
+	pscope[name] = p
 }
 function classNew(pscope, name, conf, cla){
 	var p = pscope[name] = {};
@@ -261,7 +269,7 @@ async function scopeGetSub(scope, key, cache){
 	if(haskey(scope, key)){
     return scope[key];
   }
-	let str = await dbGet(scope.__.id, key)
+	let str = await dbGet(scope.__.ns, scope.__.id, key)
 	if(str){
 		//TODO key match _, get subcpt		
 		return await progl2obj(str, scope);
@@ -273,15 +281,14 @@ async function scopeGetSub(scope, key, cache){
 		if(r) return r;		
 	}
 }
-async function scopeGet(scope, key){
+async function scopeGet(scope, key){	
 	var r = await scopeGetSub(scope, key, {});
 	if(r) return scope[key] = r;
 	if(scope.__.parent)
-		return await scopeGet(scope.__.parent, key);	
-	return undefined
+		return await scopeGet(scope.__.parent, key);
 }
 
-function valType(e){
+function rawType(e){
 	switch(typeof e){
   case "boolean":
     return "Num";
@@ -325,26 +332,56 @@ async function exec(obj, scope, execsp, execx){
 	var t = obj.__.type;	
 //	console.log(t)
   var ex;
+	if(!execx.init){
+		execx.state = {}
+		execx.stack = []
+		execx.global = {}
+		execx.init = 1;
+	}
   if(!execx[t]){
 		ex = await execGet(scope, execsp, t);
 		if(!ex)
 			die(t+" not exec defined");
     execx[t] = ex
   }
-  return await call(ex, [obj, scope, execsp, execx]);
+  return await call(ex, [obj, scope, execsp, execx], execx);
 }
-async function call(func, args){
+async function call(func, args, execx){
   if(func.func){
-    return await func.func.apply({
-    }, args)
+    return await func.func.apply(execx, args)
   }
   for(var i in func.arrobj){
     var o = func.arrobj[i];
 //    await 
   }  
 }
-async function dbGet(id, sname){
+function dbPath(x){
+	var prefix = "~/soul/db";
+	var id, ns;
+	if(!x.__.id)
+		id = "."
+	else
+		id = x.__.id
+	if(!x.__.ns)
+		ns = ""
+	else
+		ns = "/" + x.__.ns
+	return prefix + ns + "/" + id.replace("_", "/")
+}
+async function dbGet(ns, id, sname){
+//	die()
   return "";
+}
+function raw2obj(r){
+	var t = rawType(r)
+	switch(t){
+	case "Num":
+		return objNew(def.Num, {val: r});
+	case "Str":
+		return objNew(def.Str, {val: r});
+	default:
+		die("wrong type: "+t)
+	}
 }
 async function progl2obj(str, cpt){
   var ast = proglparser.parse(str);
@@ -396,15 +433,52 @@ async function ast2obj(ast, scope){
 	case "call":
 		var func = await ast2obj(v, scope);
 		var args = await ast2obj(['arr', v2], scope);
-		return objNew(def.Call, {
-			func: func,
-			args: args
-		})
+		return callNew(func, args)
+		
+	case "assign":
+		var args = []
+		args[0] = await ast2obj(v[0], scope);
+		args[1] = await ast2obj(v[1], scope);		
+		if(!v[2]){
+			return callNew(def.assign, args);
+		}
+		if(v[2] == "plus"){
+			return callNew(def.concat, args);			
+		}
+		args[1] = callNew(def[v[2]], [args[0], args[1]]);
+		return callNew(def.assign, args);
 		
 	case "id":
-		var r = await scopeGet(scope, v);
-		return r;
+		var args = []
+		if(scope[v]){
+			args[0] = callNew(def.state, [])
+		}else{
+			var r = scopeGet(scope, v);
+			if(r)
+				return r;
+			else
+				args[0] = callNew(def.global, [])										
+		}
+		args[1] = raw2obj(v);
+		return callNew(def.get, args);
 
+	case "local":
+		/*
+		if(v[0][0] == "id"){
+		}else if(v[0][0] == "get"){
+		}else if(v[0][0] == "local"){
+			var k = v[0][1];
+			scopeNew(scope, k);
+			scope[k].
+			args[0] = callNew(def.state, []);
+			args[1] = raw2obj(k);			
+		}else{
+			die("error");
+		}
+*/
+	case "get":
+		return;
+		
 	case "arr":
 		var arrx = [];
 		for(var i in v){
@@ -415,6 +489,8 @@ async function ast2obj(ast, scope){
 			val: arrx
 		})
 		//		  return elem("ArrDef", arres, cpt);
+	case "func":
+		return;
 	default:
 		die("type error: "+t);
 	}
