@@ -90,8 +90,8 @@ var grammar = {
 //	"parseParams": ["xp"],
   "bnf": {
 		Start: [
-			["Elem", "return $$ = $1"],
-			["Elem ,", "return $$ = $1"],
+			["Expr", "return $$ = $1"],
+			["Expr ,", "return $$ = $1"],			
 		],
 		Expr: [
 			"Undf",
@@ -130,15 +130,16 @@ var grammar = {
     ],
 		Id: [
 			["ID", "$$ = ['id', $1]"],
-			["ID :: ID", "$$ = ['local', $1, ['id', $3]]"],
-			["ID :: Call", "$$ = ['local', $1, $3]"],		
-			["ID ::", "$$ = ['local', $1]"],
+			["ID | ID |", "$$ = ['local', $1, ['idf', $3]]"],
+			["ID | Call |", "$$ = ['local', $1, $3]"],		
+			["ID | |", "$$ = ['local', $1]"],
 		],
 		Elem: [
-			"Expr",
-			"Ctrl",
-			"Natl",
-		  ["KeyColon Expr", "$$ = [$1, $2]"],			
+			["Expr", "$$ = [$1]"],
+			["Ctrl", "$$ = [$1]"],
+			["Natl", "$$ = [$1]"],
+		  ["KeyColon Expr", "$$ = [$2, $1]"],
+		  ["KeyColon , Expr", "$$ = [$3, $1]"],						
 		],
 		"Ctrl": [
 			["@ ID ", "$$ = ['ctrl', $1]"],
@@ -207,16 +208,16 @@ var grammar = {
 			"Get"
 		],
 		"ASSIGN": [
-			["Assignable = Expr", "$$ = [$1, $3]"],
-			["Assignable += Expr", "$$ = [$1, $3, 'plus']"],
-			["Assignable ++", "$$ = [$1, ['num', 1], 'plus']"],
-			["Assignable -= Expr", "$$ = [$3, $1, 'minus']"],
-			["Assignable --", "$$ = [$1, ['num', 1], 'minus']"],
-			["Assignable *= Expr",  "$$ = [$1, $3, 'times']"],
-			["Assignable /= Expr",  "$$ = [$1, $3, 'obelus']"],
-			["Assignable ?= Expr",  "$$ = [$1, $3, 'definedor']"],	
+			["Expr = Expr", "$$ = [$1, $3]"],
+			["Expr += Expr", "$$ = [$1, $3, 'plus']"],
+			["Expr ++", "$$ = [$1, ['num', 1], 'plus']"],
+			["Expr -= Expr", "$$ = [$3, $1, 'minus']"],
+			["Expr --", "$$ = [$1, ['num', 1], 'minus']"],
+			["Expr *= Expr",  "$$ = [$1, $3, 'times']"],
+			["Expr /= Expr",  "$$ = [$1, $3, 'obelus']"],
+			["Expr ?= Expr",  "$$ = [$1, $3, 'definedor']"],	
 		],
-		"Op": "$$ = ['call', ['id', $1[0]], $1[1]]",
+		"Op": "$$ = ['call', ['idf', $1[0]], $1[1]]",
 		"OP": [
 			["! Expr", "$$ = ['not', [$2]]"],
 			["? Expr", "$$ = ['defined', [$2]]"],			

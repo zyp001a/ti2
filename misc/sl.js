@@ -54,7 +54,13 @@ var def = scopeNew(root, "def");
 var astScope = scopeNew(def);
 classNew(def, "Class")
 classNew(def, "Obj")
-classNew(def, "Raw")
+classNew(def, "Callable")
+classNew(def, "Raw", {}, [def.Callable])
+classNew(def, "Var", {
+	schema: {
+		type: def.Class
+	}
+})
 classNew(def, "Undf", {
   default: undefined
 }, [def.Raw])
@@ -73,35 +79,35 @@ classNew(def, "Dic", {
 classNew(def, "Argdef", {
   default: [[]]
 }, [def.Raw])
-classNew(def, "Callable", {
-})
 classNew(def, "Call", {
 	schema:{
 		func: def.Func,
 		args: def.Arr,
 	}
 }, [def.Callable])
+classNew(def, "Ctrl")
 classNew(def, "Block", {
-  schema: {
-    arrobj: def.ArrObj,
-    label: classSub(def.Dic, {element: def.Num})
-  }
-})
-classNew(def, "Func", {
+	default: {
+		block: [],
+		labels: {}
+	}
+}, [def.Raw])
+classNew(def, "Func");	
+classNew(def, "Function", {
   default: function(){}
 }, [def.Raw]);
 classNew(def, "FuncNative", {
   schema: {
-    func: def.Func,
+    func: def.Function,
     argdef: def.Argdef,
   }
-});
+}, [def.Func]);
 classNew(def, "FuncBlock", {
   schema: {
     block: def.Block,
     argdef: def.Argdef,
   }
-});
+}, [def.Func]);
 
 funcNew(def, "log", function(s){
 	console.log(s);
@@ -110,12 +116,32 @@ funcNew(def, "state", function(){
 	var self = this;
 	return self.state;
 })
+funcNew(def, "global", function(){
+	var self = this;
+	return self.global;
+})
+funcNew(def, "set", function(p, k, v){
+	return p[k] = v;
+}, [["p"], ["k"], ["v"]])
+funcNew(def, "get", function(p, k){
+	return p[k];
+}, [["p"], ["k"]])
+funcNew(def, "concat", function(p, k, v){
+	return p[k] += v;
+}, [["p"], ["k"], ["v"]])
+
+
 var execarg = [["o"], ["s"], ["e"], ["x"]];
 funcNew(execsp, "Call", async function(o, s, e, x){
   var func = await exec(o.func, s, e, x);
   var args = await exec(o.args, s, e, x);
   return await call(func, args, x);
 }, execarg)
+
+funcNew(execsp, "Block", async function(o, s, e, x){
+	return blockExec(o)
+}, execarg)
+
 funcNew(execsp, "Arr$elementCallable", async function(o, s, e, x){
 	var arrx = [];
 	for(var i in o.val){
@@ -123,12 +149,23 @@ funcNew(execsp, "Arr$elementCallable", async function(o, s, e, x){
 	}
 	return arrx;
 }, execarg)
+
+funcNew(execsp, "Dic$elementCallable", async function(o, s, e, x){
+	var dicx = [];
+	for(var k in o.val){
+		dicx[k] = await exec(o.val[k], s, e, x);
+	}
+	return dicx;
+}, execarg)
+
 funcNew(execsp, "Raw", function(o, s, e, x){
 	return o.val;
 }, execarg)
+
 funcNew(execsp, "Class", function(o, s, e, x){
 	return o;
 }, execarg)
+
 //parser function
 function valCopy(item){
   let result = undefined;
@@ -149,6 +186,7 @@ function valCopy(item){
   return result || item;
 }
 function callNew(func, args){
+	if(!args) args = objNew(def.Arr, {val:[]});
 	return objNew(def.Call, {
 		func: func,
 		args: args
@@ -160,7 +198,7 @@ function funcNew(scope, name, func, argdef){
 	var o = objNew(def.FuncNative, {
 		argdef: a,
 		func: func
-	}, name)
+	}, name);
 	return scope[name] = o;
 }
 function objNew(cla, proto, name){
@@ -205,8 +243,15 @@ function classSub(c, conf){
 		return c.__.parent[name];
   return classNew(c.__.parent, name, conf, [c]);
 }
-function route(pscope, name, p){
-	var x = p.__;
+function route(pscope, name){
+	var p = {}
+	var x = p.__ = {};
+	Object.defineProperty(p, '__', {
+		enumerable: false,
+		configurable: false
+	});
+	if(!pscope) return p;
+	pscope[name] = p;	
   if(name == undefined){
   	name = pscope.__.index.toString();
   	pscope.__.index++;
@@ -223,42 +268,34 @@ function route(pscope, name, p){
   	x.id = pscope.__.id + "_" + name;
 		x.ns = pscope.__.ns;				
   }
-	pscope[name] = p
+	x.parent = pscope
+	return p;
 }
 function classNew(pscope, name, conf, cla){
-	var p = pscope[name] = {};
-	var x = p.__ = conf || {};
-  x.parent = pscope;
+	var p = route(pscope, name);
+	var x = p.__;
+	for(var k in conf){
+		x[k] = conf[k];
+	}
 	x.parents = {};
-
   if(!cla)
 		cla = [def.Class];		
   for(var i in cla){
     x.parents[cla[i].__.name] = cla[i];
-  }
-	Object.defineProperty(p, '__', {
-		enumerable: false,
-		configurable: false
-	});
-
-	route(pscope, name, p);
+  }	
+	return p;
+}
+function varNew(pscope, name, cla){
+	var p = route(pscope, name);
+	p.type = cla;
 	return p;
 }
 function scopeNew(pscope, name){
-	var proto = {};
-	var x = proto.__ = {
-		parent: pscope,
-		parents: {}
-	};
-	Object.defineProperty(proto, '__', {
-		enumerable: false,
-		configurable: false
-	});
+	var p = route(pscope, name);	
+	var x = p.__;
+	x.parents = {};
 	x.index = 0;
-	if(!pscope)
-		return proto;
-	route(pscope, name, proto);
-	return proto;
+	return p;
 }
 async function scopeGetOrNew(scope, key){	
 	var x = await scopeGet(scope, key);
@@ -269,15 +306,16 @@ async function scopeGetSub(scope, key, cache){
 	if(haskey(scope, key)){
     return scope[key];
   }
-	let str = await dbGet(scope.__.ns, scope.__.id, key)
+	let str = await dbGet(scope.__.ns, scope.__.id, key);
 	if(str){
 		//TODO key match _, get subcpt		
-		return await progl2obj(str, scope);
+		var rtn = await progl2obj(str, scope);
+		return scope[key] = rtn;
 	}
 	for(var k in scope.__.parents){
 		if(cache[k]) continue;
 		cache[k] = 1;		
-		var r = scopeGetSub(scope.__.parents[k], key, cache);
+		var r = await scopeGetSub(scope.__.parents[k], key, cache);
 		if(r) return r;		
 	}
 }
@@ -346,14 +384,28 @@ async function exec(obj, scope, execsp, execx){
   }
   return await call(ex, [obj, scope, execsp, execx], execx);
 }
-async function call(func, args, execx){
-  if(func.func){
+function stateLoad(argdef, args, x){
+}
+async function blockExec(b, s, e, x, stt){
+	if(stt) stt = b.labels[stt];
+	for(var i in b.arr){
+		if(stt && stt < i)
+			continue;
+		var r = await exec(b.arr[i], s, e, x);
+	}
+}
+async function call(func, args, s, e, x){
+  if(func.func){//is FuncNative
+		log(func.__.name)
     return await func.func.apply(execx, args)
   }
-  for(var i in func.arrobj){
-    var o = func.arrobj[i];
-//    await 
-  }  
+	//is FuncBlock
+	var state = stateLoad(func.argdef, args, execx);
+	execx.stack.push(execx.state);
+	execx.state = state;
+	var r= await blockExec(func.block, s, e, x);
+	execx.state = execx.stack.pop();
+	return r;
 }
 function dbPath(x){
 	var prefix = "~/soul/db";
@@ -386,14 +438,16 @@ function raw2obj(r){
 async function progl2obj(str, cpt){
   var ast = proglparser.parse(str);
 	log(ast)
-	return await ast2obj(ast, cpt)
+	return await ast2obj(cpt, ast)
 }
-async function ast2obj(ast, scope){
+async function ast2obj(scope, ast){
   if(typeof ast != "object") return ast;
 	var t = ast[0];
 	var v = ast[1];
 	var v2 = ast[2];	
   switch(t){
+	case "main":
+		return 
 	case "num":
 		var p = {};
 		var c = 1;
@@ -429,67 +483,119 @@ async function ast2obj(ast, scope){
 		
 	case "str":
 		return objNew(def.Str, {val: v});
-		
+	
 	case "call":
-		var func = await ast2obj(v, scope);
-		var args = await ast2obj(['arr', v2], scope);
-		return callNew(func, args)
+		var func = await ast2obj(scope, v);
+		var args = await ast2obj(scope, ['arr', v2]);
+		if(v[0] == "get")
+			args.val.unshift(func.args[0]);
+		return callNew(func, args);
 		
 	case "assign":
-		var args = []
-		args[0] = await ast2obj(v[0], scope);
-		args[1] = await ast2obj(v[1], scope);		
+		var argc = objNew(def.Arr, {val: []});
+		var args = argc.val;
+		var getv = await ast2obj(scope, v[0]);
+		if(getv.__.type == "Call"){
+			args[0] = getv.args.val[0];
+			args[1] = getv.args.val[1];
+		}else{
+			args[0] = getv.__.parent;
+			args[1] = raw2obj(getv.__.name);
+		}
+		args[2] = await ast2obj(scope, v[1]);
 		if(!v[2]){
-			return callNew(def.assign, args);
+			return callNew(def.set, argc);
 		}
 		if(v[2] == "plus"){
-			return callNew(def.concat, args);			
+			return callNew(def.concat, argc);
 		}
-		args[1] = callNew(def[v[2]], [args[0], args[1]]);
-		return callNew(def.assign, args);
+		args[2] = callNew(def[v[2]], [getv, args[2]]);
+		return callNew(def.set, argc);
+		
+	case "idf":
+		return await scopeGet(scope, v);
 		
 	case "id":
-		var args = []
+		var a0;
 		if(scope[v]){
-			args[0] = callNew(def.state, [])
+			a0 = callNew(def.state);
 		}else{
-			var r = scopeGet(scope, v);
+			var r = await scopeGet(scope, v);
 			if(r)
 				return r;
-			else
-				args[0] = callNew(def.global, [])										
+			a0 = callNew(def.global);
 		}
-		args[1] = raw2obj(v);
-		return callNew(def.get, args);
-
+		a1 = raw2obj(v);
+		return callNew(def.get, objNew(def.Arr, {val: [a0, a1]}));
 	case "local":
-		/*
-		if(v[0][0] == "id"){
-		}else if(v[0][0] == "get"){
-		}else if(v[0][0] == "local"){
-			var k = v[0][1];
-			scopeNew(scope, k);
-			scope[k].
-			args[0] = callNew(def.state, []);
-			args[1] = raw2obj(k);			
-		}else{
-			die("error");
-		}
-*/
+		var t;
+		if(v2)
+			t = await ast2obj(scope, v2);
+		else
+			t = def.Class;
+		varNew(scope, v, t);
+		var a0 = callNew(def.state);
+		var a1 = raw2obj(v);
+		return callNew(def.get, objNew(def.Arr, {val: [a0, a1]}));		
+		
 	case "get":
-		return;
+		var a0 = await ast2obj(scope, v[0]);
+		var a1 = await ast2obj(scope, v[0]);
+		return callNew(def.get, objNew(def.Arr, {val: [a0, a1]}));
 		
 	case "arr":
 		var arrx = [];
 		for(var i in v){
-			arrx[i] = await ast2obj(v[i], scope);
+			arrx[i] = await ast2obj(scope, v[i]);
 		}
-		var c = classSub(def.Arr, {element: def.Callable})
+		var c = classSub(def.Arr, {element: def.Callable});
 		return objNew(c, {
 			val: arrx
 		})
-		//		  return elem("ArrDef", arres, cpt);
 	case "func":
+		return;
+	case "dic":
+		if(!v2){
+			var kall = 1;
+			for(var i in v){
+				if(!haskey(v[i], 1)){
+					kall = 0;
+					break;
+				}
+			}
+			if(kall) v2 = "Dic";
+			else v2 = "Block";
+		}
+		if(v2 == "Block"){
+			var arr = [];
+			var labels = {};
+			for(var i in v){
+				var x = v[i];
+				var y = await ast2obj(x[0], scope);
+				arr.push(y);
+				labels[x[1]] = i;
+			}
+			return objNew(def.Block, {arr:arr, labels: {}});
+		}
+		if(v2 == "Dic"){
+			var dicx = {};
+			var iscallable = 0;
+			for(var i in v){
+				var x = v[i];
+				var y = await ast2obj(x[0], scope);
+				dicx[x[1]] = y;
+				if(!iscallable && istype(y, "Callable")){
+					iscallable = 1;
+				}
+			}
+			var c;
+			if(iscallable)
+				c = classSub(def.Dic, {element: def.Callable});
+			else
+				c = def.Dic;
+			return objNew(c, {val: dicx});			
+		}
+	case "ctrl":
 		return;
 	default:
 		die("type error: "+t);
