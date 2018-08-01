@@ -7,7 +7,10 @@
  global.eximports = <>
  global.eximports["proglparser"] = =>{
   system("node "+env[0]+ "/../misc"+"/progl-grammar.js proglparser.js")
- } 
+ }
+ global.eximports["tplparser"] = =>{
+  system("node "+env[0]+ "/../misc"+"/tpl-grammar.js tplparser.js")
+ }
  global.packages = <> 
  $x = noexec(mainblock)
  $mainstr = gen(x, 1);
