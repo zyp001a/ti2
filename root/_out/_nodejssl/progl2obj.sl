@@ -1,1 +1,1 @@
-`await progl2obj(~=$_0[1]~, ~=$_0[0]~)`
+`await progl2obj(~=$_0[1]~, ~=$_0[0]~, def.Main)`

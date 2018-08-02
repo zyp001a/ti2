@@ -54,6 +54,7 @@ var def = scopeNew(root, "def");
 classNew(def, "Class")
 classNew(def, "Obj")
 classNew(def, "Callable")
+classNew(def, "Src");
 classNew(def, "Raw", {}, [def.Callable])
 classNew(def, "RawObj", {}, [def.Raw])
 classNew(def, "Var", {
@@ -95,6 +96,10 @@ classNew(def, "FuncBlock", {
 }, [def.Func]);
 classNew(def, "FuncTpl", {
 }, [def.Func]);
+classNew(def, "Main", {
+}, [def.Src]);
+classNew(def, "Lib", {
+}, [def.Src]);
 
 funcNew(def, "log", function(s){
 	console.log(s);
@@ -102,10 +107,10 @@ funcNew(def, "log", function(s){
 funcNew(def, "push", function(arr, e){
 	arr.push(e);
 	return e;
-}, [["s"]])
+}, [["arr"], ["e"]])
 funcNew(def, "join", function(arr, str){
 	return arr.join(str)
-}, [["s"]])
+}, [["arr"],["str"]])
 funcNew(def, "state", function(){
 	var self = this;
 	return self.x.state;
@@ -153,6 +158,12 @@ funcNew(execsp, "Dic$elementCallable", async function(o){
 		dicx[k] = await exec(o.val[k], this);
 	}
 	return dicx;
+}, execarg)
+funcNew(execsp, "Lib", function(o){
+	return o.content
+}, execarg)
+funcNew(execsp, "Main", async function(o){
+	return await exec(o.content, this)
 }, execarg)
 funcNew(execsp, "Raw", function(o){
 	return o.val;
@@ -328,7 +339,7 @@ async function scopeGetSub(scope, key, cache){
 		var rtn = await progl2obj(scope, str);
 		if(rtn.___.type == "FuncBlock")
 			route(scope, key, rtn);
-		return rtn;
+		return objNew(def.Lib, {content: rtn});
 	}
 	for(var k in scope.__.parents){
 		if(cache[k]) continue;
@@ -525,7 +536,8 @@ function raw2obj(r){
 async function progl2obj(scope, str){
   var ast = proglparser.parse(str);
 	log(ast[1])
-	return await ast2obj(scope, ast)
+	var r = await ast2obj(scope, ast);
+	return r;
 }
 async function ast2obj(scope, ast){
   if(typeof ast != "object") return ast;
