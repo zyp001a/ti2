@@ -12,16 +12,17 @@ var grammar = {
     "rules": [
 			["\\/\\*.*\\*\\/", "return;"],//COMMENT
 			["\\\/\\\/[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
-			["#[^\\n\\r]+[\\n\\r]*", "return;"],			
+//			["#[^\\n\\r]+[\\n\\r]*", "return;"],			
 			["@`(\\\\.|[^\\\\`])*`", 
-			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\`/g, '`'); return 'TPL';"],
+			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\([`~\\&])/g, '$1'); return 'TPL';"],
 			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"|`(\\\\.|[^\\\\`])*`",
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t'; return n;}); return 'STR';"], 
 			["\<[a-zA-Z0-9_\\\/\\s]*\>",
        "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'NATL';"],
       ["\\\\[\\r\\n;]+", "return"],//allow \ at end of line
 			["\\b\\_\\b", "return 'UNDF'"],
-			["\\$?[a-zA-Z_][a-zA-Z0-9_]*", "return 'ID'"],
+			["\\$?[a-zA-Z_][a-zA-Z0-9_]*\\$?", "return 'ID'"],
+			["\\$[0-9]+", "yytext = yytext.substr(1);return 'LOCAL'"],			
 //TODO bignumber
       ["{int}{frac}?{exp}?u?[slbf]?\\b", "return 'NUM';"],
       ["0[xX][a-zA-Z0-9]+\\b", "return 'NUM';"],
@@ -48,6 +49,7 @@ var grammar = {
 			["\\/\\=", "return '/='"],
 			["\\|\\|", "return '||'"],
 			["\\&\\&", "return '&&'"],
+      ["\\#", "return '#'"],			
       ["\\>", "return '>'"],
       ["\\<", "return '<'"],
       ["\\&", "return '&'"],
@@ -83,6 +85,7 @@ var grammar = {
     ["left", "*", "/", "%"],
     ["left", "++", "--"],		
     ["right", "&", "@", "|"],
+    ["left", "#"],				
     ["right", "!"],
 		["left", "(", ")", "[", "]", "{", "}"],		 
 	],
@@ -101,6 +104,7 @@ var grammar = {
 //			
 			"Func",			
 			"Tpl",
+			"Arr",
 			"Dic",
 			"Obj",
 			"Class",
@@ -130,9 +134,10 @@ var grammar = {
     ],
 		Id: [
 			["ID", "$$ = ['id', $1]"],
-			["ID | ID |", "$$ = ['local', $1, ['idf', $3]]"],
-			["ID | Call |", "$$ = ['local', $1, $3]"],		
-			["ID | |", "$$ = ['local', $1]"],
+			["LOCAL", "$$ = ['local', $1]"],			
+			["ID # ID ", "$$ = ['local', $1, ['idf', $3]]"],
+			["ID # SubClass ", "$$ = ['local', $1, $3]"],		
+			["ID # ", "$$ = ['local', $1]"],
 		],
 		Elem: [
 			["Expr", "$$ = [$1]"],
@@ -150,6 +155,11 @@ var grammar = {
 			["ID :", "$$ = $1"],
 			["STR :", "$$ = $1"],
 			["NUM :", "$$ = $1"],
+		],
+		KeyHash: [
+			["ID #", "$$ = $1"],
+			["STR #", "$$ = $1"],
+			["NUM #", "$$ = $1"],
 		],
 		Elems: [
       [",", "$$ = [];"],			
@@ -176,8 +186,6 @@ var grammar = {
 		"FUNC": [
 			["& Dic", "$$ = [$2]"],
 			["& Args Dic", "$$ = [$3, $2]"],
-//			["& ID Dic", "$$ = [$3, ,$2]"],			
-//			["& ID Args Dic", "$$ = [$4, $3, $2]"],
 		],
 		"Args": [
 			["( )", "$$= [[]]"],
@@ -191,16 +199,15 @@ var grammar = {
     ],
 		"Subdef": [
 			["ID", "$$ = [$1]"],
-			["KeyColon Type", "$$ = [$1, $2]"],
-		],
-		"Type": [
-			["Id", "$$=['idf', $1]"],
-			["Id CallArgs", "$$=['call', $1, $2]"],
+			["KeyHash Id", "$$ = [$1, $2]"],
 		],
 		"Call": [
 			["Id CallArgs", "$$ = ['call', $1, $2];"],
 			["Get CallArgs", "$$ = ['call', $1, $2];"],
 			["Call CallArgs", "$$ = ['call', $1, $2];"],
+		],
+		"SubClass": [
+			["ID { Exprs }", "$$ = ['subclass', $1, $3];"],
 		],
 		"CallArgs": [
 			["( )", "$$ = []"],

@@ -6,7 +6,8 @@ var grammar = {
     "rules": [
 			["~=(\\\\.|[^\\\\\~])*~",	"yytext = yytext.substr(2,yyleng-3).replace(/\\\\~/g, '~'); return 'GET';"],
 			["[\\t ]*~[^=](\\\\.|[^\\\\\~])*~[\\n\\r]*",	"yytext = yytext.replace(/^[\\t ]*~/, '').replace(/~[\\n\\r]*$/, '').replace(/\\\\~/g, '~'); return 'INS';"],
-//			["~(\\\\.|[^\\\\\~])*~",	"yytext = yytext.substr(1,yyleng-2).replace(/\\\\~/g, '~'); return 'INS';"],
+			//			["~(\\\\.|[^\\\\\~])*~",	"yytext = yytext.substr(1,yyleng-2).replace(/\\\\~/g, '~'); return 'INS';"],
+			["\\&[0-9]+", "yytext=yytext.substr(1);return 'EXEC'"],
 			["(\\\\.|[^\\\\\~])", "return 'RAW';"]
 		]
 	},
@@ -14,7 +15,7 @@ var grammar = {
 //	"parseParams": [""],
   "bnf": {
 		"Start": [
-			["ES", "return $$ = '{$arr$ = [];push($arr$, `' + $1 + '`);join($arr$, ``);}'"]
+			["ES", "return $$ = '{$arr$ #= [];push($arr$, `' + $1 + '`);join($arr$, ``);}'"]
 		],
 		"ES": [
 			["E", "$$ = $1"],
@@ -23,6 +24,7 @@ var grammar = {
 		"E": [
 			["GET", "$$ = '`);push($arr$, ' + $1 + ');push($arr$, `'"],
 			["INS", "$$ = '`);' + $1 + ';push($arr$, `'"],
+			["EXEC", "$$ = '`);push($arr$, exec($' + $1 + '));push($arr$, `'"],			
 			["RAW", "$$ = $1"],
 		],
   }
