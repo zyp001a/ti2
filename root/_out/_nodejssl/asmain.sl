@@ -1,0 +1,1 @@
+`objNew(def.Main, {content: ~=$_0~})`

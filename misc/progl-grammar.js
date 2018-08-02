@@ -26,6 +26,18 @@ var grammar = {
 //TODO bignumber
       ["{int}{frac}?{exp}?u?[slbf]?\\b", "return 'NUM';"],
       ["0[xX][a-zA-Z0-9]+\\b", "return 'NUM';"],
+			["@if", "return 'IF'"],
+			["@else", "return 'ELSE'"],
+			["@elif", "return 'ELIF'"],						
+			["@return", "return 'RETURN'"],
+			["@continue", "return 'CONTINUE'"],
+			["@break", "return 'BREAK'"],			
+			["@goto", "return 'GOTO'"],			
+			["@for", "return 'FOR'"],
+			["@each", "return 'EACH'"],
+			["@foreach", "return 'FOREACH'"],
+			["@while", "return 'WHILE'"],
+			["@switch", "return 'SWITCH'"],						
 			["\\=\\>", "return '=>'"],
 			["\\-\\>", "return '->'"], 
       ["\\(", "return '('"],
@@ -96,6 +108,12 @@ var grammar = {
 			["Expr", "return $$ = $1"],
 			["Expr ,", "return $$ = $1"],			
 		],
+		CallEx: [
+			["Call", "$$ = ['dic', [$1]]"],
+			["Op", "$$ = ['dic', [$1]]"],
+			["Assign", "$$ = ['dic', [$1]]"],
+			"Dic"
+		],
 		Expr: [
 			"Undf",
 			"Char",
@@ -129,7 +147,7 @@ var grammar = {
 			["[ Exprs ]", "$$ = ['arr', $2]"]
 		],
     "Dic": [
-      ["{ }", "$$ = ['dic', {}]"],
+      ["{ }", "$$ = ['dic', []]"],
       ["{ Elems }", "$$ = ['dic', $2]"],
     ],
 		Id: [
@@ -147,9 +165,17 @@ var grammar = {
 		  ["KeyColon , Expr", "$$ = [$3, $1]"],						
 		],
 		"Ctrl": [
-			["@ ID ", "$$ = ['ctrl', $1]"],
-			["@ ID Exprs ", "$$ = ['ctrl', $1, $2]"],						
-		],		
+			["If", "$$ = ['ctrl', 'if', $1]"],
+			["WHILE Expr Dic", "$$ = ['ctrl', 'while', [$2, $3]]"],
+			["RETURN Expr", "$$ = ['ctrl', 'return', [$2]]"],
+			["BREAK", "$$ = ['ctrl', 'break']"],						
+//			["CONTINUE", "$$ = ['ctrl', 'continue']"],			
+		],
+		"If": [
+			["IF Expr Dic", "$$ = [$2, $3]"],
+			["If ELIF Expr Dic", "$$ = $1; $1.push($3); $1.push($4)"],
+			["If ELSE Dic", "$$ = $1; $1.push($3)"],
+		],
 		Natl: "$$ = ['natl', $1.split(/\\s+/)]",
 		KeyColon: [
 			["ID :", "$$ = $1"],
@@ -221,9 +247,9 @@ var grammar = {
 		"ASSIGN": [
 			["Expr = Expr", "$$ = [$1, $3]"],
 			["Expr += Expr", "$$ = [$1, $3, 'plus']"],
-			["Expr ++", "$$ = [$1, ['num', 1], 'plus']"],
+			["Expr ++", "$$ = [$1, ['num', '1'], 'plus']"],
 			["Expr -= Expr", "$$ = [$3, $1, 'minus']"],
-			["Expr --", "$$ = [$1, ['num', 1], 'minus']"],
+			["Expr --", "$$ = [$1, ['num', '1'], 'minus']"],
 			["Expr *= Expr",  "$$ = [$1, $3, 'times']"],
 			["Expr /= Expr",  "$$ = [$1, $3, 'obelus']"],
 			["Expr ?= Expr",  "$$ = [$1, $3, 'definedor']"],	
