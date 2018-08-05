@@ -42,6 +42,9 @@ function die(){
   console.error(getStackTrace());
   process.exit();
 }
+function st(){
+  console.error(getStackTrace());
+}
 function getStackTrace(){
   var obj = {};
   Error.captureStackTrace(obj, getStackTrace);
@@ -57,10 +60,7 @@ classNew(def, "Callable")
 classNew(def, "Raw", {}, [def.Callable])
 classNew(def, "RawObj", {}, [def.Raw])
 classNew(def, "Var", {
-	schema: {
-		type: def.Class
-	}
-})
+}, [def.Raw]) //TODO
 classNew(def, "Undf", {
   default: undefined
 }, [def.Raw])
@@ -131,8 +131,11 @@ funcNew(def, "set", function(p, k, v, t){//t is type
   //TODO if type, check type
 	return scopeSet(p, k, v)
 }, [["p"], ["k"], ["v"], ["t"]])
-funcNew(def, "get", function(p, k){
-	return scopeGet(p, k);
+funcNew(def, "get", async function(p, k){
+	return (await scopeGet(p, k)).value;
+}, [["p"], ["k"]])
+funcNew(def, "haskey", async function(p, k){
+	return await scopeGet(p, k)  
 }, [["p"], ["k"]])
 funcNew(def, "aget", function(p, k){
 	return p[k]
@@ -400,35 +403,37 @@ function scopeNew(pscope, k){
 }
 async function scopeGetOrNew(scope, key){
 	var x = await scopeGet(scope, key);
-	if(!x) x = scopeNew(scope, key);
-	return x;
+	if(!x) return x = scopeNew(scope, key);
+	return x.value;
 }
 async function scopeGetSub(scope, key, cache){
   var v = haskeyr(scope, key);
 	if(v){
-    return v.value;
-  }
-  
+    return v;
+  }  
 	let str = await dbGet(scope, key);
 	if(str){
 		//TODO key match _, get subcpt
 		var rtn = await progl2obj(scope, str);
-		if(rtn.___.type == "FuncBlock")
-			route(scope, key, rtn);
-		return rtn;
+//		if(rtn.___.type == "FuncBlock")
+		route(scope, key, rtn);
+		return haskey(scope, key);
 	}
 	for(var k in scope.__.parents){
 		if(cache[k]) continue;
-		cache[k] = 1;		
+		cache[k] = 1;
 		var r = await scopeGetSub(scope.__.parents[k], key, cache);
 		if(r) return r;
 	}
 }
 async function scopeGet(scope, key){
-	var r = await scopeGetSub(scope, key, {});
-	if(r) return r//scopeSet(scope, key, r);
-	if(scope.__.parent)
-		return await scopeGet(scope.__.parent, key);
+  var cache = {};
+	var r = await scopeGetSub(scope, key, cache);
+	if(r) return r
+	if(scope.__.parent){
+		var r2 = await scopeGet(scope.__.parent, key);
+    return r2;
+  }
 }
 function scopeSet(x, k, r){
   if(k.match("_")){
@@ -498,12 +503,16 @@ function haskeyr(x, k){
 async function istype(obj, type){
   
 }
-async function execGet(sp, esp, t){
+async function execGet(sp, esp, t, cache){
+  if(!cache) cache = {};
 	var r = await scopeGet(esp, t);
-	if(r) return r;
-	var tt = await scopeGet(sp, t);
+	if(r) return r.value;
+	var tt = await scopeGet(sp, t)
+  tt = tt.value;
 	for(var k in tt.__.parents){
-		r = await execGet(sp, esp, k);
+    if(cache[k]) return;
+    cache[k] = 1;
+		r = await execGet(sp, esp, k, cache);
 		if(r) return r;
 	}	
 }
@@ -574,7 +583,7 @@ async function tplCall(str, args, conf){
 	for(var i in args){
 		nconf.x.state[i] = args[i]
 	}
-	nconf.x.state.$arglen = args.length;
+	nconf.x.state.$arglen = args.length;  
 	var r = await blockExec(obj, nconf);
 	return r.return;
 }
@@ -730,7 +739,7 @@ async function ast2obj(scope, ast){
 		return callNew(def.set, args);
 		
 	case "idf":
-		return await scopeGet(scope, v);
+		return (await scopeGet(scope, v)).value;
 		
 	case "id":
 		var a0;
@@ -739,7 +748,7 @@ async function ast2obj(scope, ast){
 		}else{
 			var r = await scopeGet(scope, v);
 			if(r)
-				return r;
+				return r.value;
 			a0 = callNew(def.global);
 		}
 		a1 = raw2obj(v);
