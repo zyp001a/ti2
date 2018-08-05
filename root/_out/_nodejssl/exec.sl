@@ -1,1 +1,1 @@
-`exec(~=$_0[0]~, {s:~=$_0[1]~, e:~=$_0[2]~, x:{}})`
+`exec(~=$_0[0]~, {s:~=$_0[1]~, e:~=$_0[2]~, x:{global:{argv:objNew(classSub(def.Arr, {element:def.Str}), process.argv)}}});`

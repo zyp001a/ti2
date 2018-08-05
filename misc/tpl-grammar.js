@@ -15,16 +15,16 @@ var grammar = {
 //	"parseParams": [""],
   "bnf": {
 		"Start": [
-			["ES", "return $$ = '{$arr$ #= [];push($arr$, `' + $1 + '`);@return join($arr$, ``);}'"]
+			["ES", "return $$ = '{$arr# = [];push($arr#, `' + $1 + '`);@return join($arr#, ``);}'"]
 		],
 		"ES": [
 			["E", "$$ = $1"],
 			["ES E", "$$ = $1 + $2"],			
 		],
 		"E": [
-			["GET", "$$ = '`);push($arr$, ' + $1 + ');push($arr$, `'"],
-			["INS", "$$ = '`);' + $1 + ';push($arr$, `'"],
-			["EXEC", "$$ = '`);push($arr$, exec($' + $1 + '));push($arr$, `'"],			
+			["GET", "$$ = '`);push($arr#, ' + $1 + ');push($arr#, `'"],
+			["INS", "$$ = '`);' + $1 + ';push($arr#, `'"],
+			["EXEC", "$$ = '`);push($arr#, exec($' + $1 + ', $conf#));push($arr#, `'"],			
 			["RAW", "$$ = $1"],
 		],
   }
