@@ -138,6 +138,7 @@ funcNew(def, "haskey", async function(p, k){
 	return await scopeGet(p, k)  
 }, [["p"], ["k"]])
 funcNew(def, "aget", function(p, k){
+  if(!p.___) die("error")
 	return p[k]
 }, [["p"], ["k"]])
 funcNew(def, "concat", function(p, k, v){
@@ -220,6 +221,14 @@ funcNew(execsp, "Ctrl", async function(o){
 		}
 		break;
 	case "foreach":
+    var arr = await exec(o.args[1], self);
+    var x = await exec(o.args[0].args[0], self)
+    var k = await exec(o.args[0].args[1], self)
+		for(var i in arr){
+      scopeSet(x, k, arr[i])
+			var r = await blockExec(o.args[2], self);
+		}
+		break;    
 	case "each":
 		break;
 	case "goto":
@@ -658,7 +667,7 @@ function raw2obj(r){
 
 async function progl2obj(scope, str){
   var ast = proglparser.parse(str);
-	log(ast[1])
+//	log(ast[1])
 	var r = await ast2obj(scope, ast);
 	return r;
 }
