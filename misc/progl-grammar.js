@@ -133,8 +133,7 @@ var grammar = {
 			"Get",
 			"Op",
 			"Assign",
-			["( Expr )", "$$ = $2"]
-			
+			["( Expr )", "$$ = $2"]			
 		],		
 		Undf: "$$ = ['undf', undefined]",
 		Char: "$$ = ['char', $1]",
@@ -167,9 +166,10 @@ var grammar = {
 		"Ctrl": [
 			["If", "$$ = ['ctrl', 'if', $1]"],
 			["WHILE Expr Dic", "$$ = ['ctrl', 'while', [$2, $3]]"],
+			["FOR Expr , Expr , Expr Dic", "$$ = ['ctrl', 'for', [$2, $4, $6, $7]]"],  
 			["RETURN Expr", "$$ = ['ctrl', 'return', [$2]]"],
-			["BREAK", "$$ = ['ctrl', 'break']"],						
-//			["CONTINUE", "$$ = ['ctrl', 'continue']"],			
+			["BREAK", "$$ = ['ctrl', 'break']"],
+			["CONTINUE", "$$ = ['ctrl', 'continue']"],
 		],
 		"If": [
 			["IF Expr Dic", "$$ = [$2, $3]"],
@@ -202,9 +202,9 @@ var grammar = {
 			["Exprs ,", "$$ = $1"],			//allow additional ,;
 		],		
 		Get: [
-			["Id . Id", "$$ = ['get', $1, $3]"],
-			["Get . Id", "$$ = ['get', $1, $3]"],
-			["( Expr ) . Id", "$$ = ['get', $2, $5]"],
+			["Id . ID", "$$ = ['get', $1, ['str', $3]]"],
+			["Get . ID", "$$ = ['get', $1, ['str', $3]]"],
+			["( Expr ) . ID", "$$ = ['get', $2, ['str', $5]]"],
 			["Id [ Expr ]", "$$ = ['get', $1, $3]"],			
 			["Get [ Expr ]", "$$ = ['get', $1, $3]"],			
 			["( Expr ) [ Expr ]", "$$ = ['get', $2, $5]"],
