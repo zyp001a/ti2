@@ -17,8 +17,8 @@ var grammar = {
 			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\([`~\\&])/g, '$1'); return 'TPL';"],
 			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"|`(\\\\.|[^\\\\`])*`",
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t'; return n;}); return 'STR';"], 
-			["\<[a-zA-Z0-9_\\\/\\s]*\>",
-       "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'NATL';"],
+//			["\<[a-zA-Z0-9_\\\/\\s]*\>",
+//       "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'PARENTS';"],
       ["\\\\[\\r\\n;]+", "return"],//allow \ at end of line
 			["\\b\\_\\b", "return 'UNDF'"],
 			["\\$?[a-zA-Z_][a-zA-Z0-9_]*\\$?", "return 'ID'"],
@@ -90,8 +90,8 @@ var grammar = {
     ["right", "??", "::", "?", ":"],				
     ["right", "=", "+=", "-=", "*=", "/=", "^=", "?="],
     ["left", "++", "--"],		
-    ["left", "||"],		
-    ["left", "&&"],		
+    ["left", "||"],
+    ["left", "&&"],
 		["left", "==", "!="],
 		["left", "<", "<=", ">", ">="],		
     ["left", "+", "-", "^"],		
@@ -127,7 +127,6 @@ var grammar = {
 			"Dic",
 			"Obj",
 			"Class",
-			"Scope",
 //
 			"Id",
 			"Call",
@@ -237,8 +236,24 @@ var grammar = {
 			["Get CallArgs", "$$ = ['call', $1, $2];"],
 			["Call CallArgs", "$$ = ['call', $1, $2];"],
 		],
+		"Class":[
+			["Parents Dic", "$2[2] = 'Dic';$$ = ['class', $1, $2]"],
+			["< Parents >", "$$ = ['scope', $2]"],			
+		],
+		"Parents": [
+			["< >", "$$ = []"],
+			["< Cns >", "$$ = $2"],			
+		],
+		"Cns": [
+			["Cn", "$$ = [$1]"],
+			["Cns Cn", "$$ = $1; $1.push($2)"],			
+		],
+		"Cn": [
+			["SubClass", "$$ = $1"],
+			["ID", "$$ = ['idf', $1]"]
+		],
 		"SubClass": [
-			["ID { Exprs }", "$$ = ['subclass', $1, $3];"],
+			["ID { Exprs }", "$$ = ['subclass', ['idf', $1], ['dic', $3, 'Dic']];"],
 		],
 		"CallArgs": [
 			["( )", "$$ = []"],
