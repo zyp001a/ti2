@@ -43,7 +43,7 @@ function die(){
   process.exit();
 }
 function st(){
-  console.error(getStackTrace());
+  console.log(getStackTrace());
 }
 function getStackTrace(){
   var obj = {};
@@ -124,6 +124,12 @@ funcNew(def, "global", function(){
 funcNew(def, "pget", function(p, k){
 	return p[k];
 }, [["p"], ["k"]])
+funcNew(def, "oget", function(p, k){
+	return p.___[k];
+}, [["p"], ["k"]])
+funcNew(def, "rget", function(p, k){
+	return p.__[k];
+}, [["p"], ["k"]])
 funcNew(def, "pset", function(p, k, v){
 	return p[k] = v;
 }, [["p"], ["k"], ["v"]])
@@ -156,6 +162,18 @@ funcNew(def, "minus", function(l, r){
 funcNew(def, "times", function(l, r){
 	return l * r;
 }, [["l"], ["r"]])
+funcNew(def, "fileWrite", function(f, c){
+	return fs.writeFileSync(f, c);
+}, [["f"], ["c"]])
+
+funcNew(def, "isleaf", function(o){
+	if(typeof o != "object") return 0;
+	if(!o.__) return 0;
+	return 1
+}, [["o"]])
+
+
+
 funcNew(def, "exec", async function(o, conf){
   if(!conf) conf = this;
 	if(o === undefined) return;
@@ -165,9 +183,7 @@ funcNew(def, "exec", async function(o, conf){
   return r;
 }, [["o"], ["conf"]], 1)
 
-funcNew(def, "fileWrite", function(f, c){
-	return fs.writeFileSync(f, c);
-}, [["f"], ["c"]])
+
 
 
 var execarg = [["o"]];
@@ -214,6 +230,16 @@ funcNew(execsp, "Ctrl", async function(o){
 	var self = this;
 	switch(o.ctrl){
 	case "if":
+		var l = o.args.length;
+		var i;
+		for(i=0;i<l-1;i+=2){
+			if(await exec(o.args[i], self)){
+				return await blockExec(o.args[i+1], self);
+			}
+		}
+		if(l%2 == 1){
+			return await blockExec(o.args[l-1], self);			
+		}
 	case "for":
 	case "while":
 		while(await exec(o.args[0], self)){
@@ -267,28 +293,29 @@ function valCopy(item){
   return result || item;
 }
 function callNew(func, args){
-	if(!args) args = []
+	if(!args) args = objNew(def.Arr, []);
+	if(!args.___) args = objNew(def.Arr, args);
 	return objNew(def.Call, {
 		func: func,
-		args: args
+		args: args,
 	});
 }
 //internal function
 function fbNew(block, argdef){
 	return objNew(def.FuncBlock, {
 		block: block,
-		argdef: argdef
+		argdef: argdef,
 	})
 }
 function ftNew(str){
 	return objNew(def.FuncTpl, {
-		str: str
+		str: str,
 	})
 }
 function funcNew(scope, name, func, argdef, flagraw){
 	var o = objNew(def.FuncNative, {
 		argdef: argdef,
-		func: func
+		func: func,
 	});
   if(name)
 		route(scope, name, o);
@@ -719,8 +746,8 @@ async function ast2obj(scope, ast){
 	//TODO classSub		
 		var args = await ast2obj(scope, ['arr', v2]);
 		if(v[0] == "get")
-			args.val.unshift(func.args[0]);
-		return callNew(func, args.val);
+			args.unshift(func.args[0]);
+		return callNew(func, args);
 		
 	case "assign":
 		var args = [];
@@ -752,16 +779,19 @@ async function ast2obj(scope, ast){
 		
 	case "id":
 		var a0;
+		var f;
 	  if(haskey(scope, v)){
 			a0 = callNew(def.state);
+			f = def.aget
 		}else{
 			var r = await scopeGet(scope, v);
 			if(r)
 				return r.value;
 			a0 = callNew(def.global);
+			f = def.get
 		}
 		a1 = raw2obj(v);
-		return callNew(def.get, [a0, a1]);
+		return callNew(f, [a0, a1]);
 		
 	case "local":
 		var t;
@@ -772,7 +802,7 @@ async function ast2obj(scope, ast){
 		varNew(scope, v, t);
 		var a0 = callNew(def.state);
 		var a1 = raw2obj(v);
-		return callNew(def.get, [a0, a1]);		
+		return callNew(def.aget, [a0, a1]);		
 		
 	case "get":
 		var a0 = await ast2obj(scope, v);
@@ -791,9 +821,7 @@ async function ast2obj(scope, ast){
 			arrx[i] = await ast2obj(scope, v[i]);
 		}
 		var c = classSub(def.Arr, {element: def.Callable});
-		return objNew(c, {
-			val: arrx
-		})
+		return objNew(c, arrx)
 	case "func":
 		var block = v[0];
 		var argdef = v[1];
@@ -856,7 +884,7 @@ async function ast2obj(scope, ast){
 				c = classSub(def.Dic, {element: def.Callable});
 			else
 				c = def.Dic;
-			return objNew(c, {val: dicx});			
+			return objNew(c, dicx);			
 		}
 	case "ctrl":
 		var args = [];

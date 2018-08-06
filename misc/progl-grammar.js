@@ -153,9 +153,9 @@ var grammar = {
 		Id: [
 			["ID", "$$ = ['id', $1]"],
 			["LOCAL", "$$ = ['local', $1]"],			
-			["ID # ID ", "$$ = ['local', $1, ['idf', $3]]"],
-			["ID # SubClass ", "$$ = ['local', $1, $3]"],		
-			["ID # ", "$$ = ['local', $1]"],
+			["ID # ID ", "$$ = ['local', $3, ['idf', $1]]"],
+			["( SubClass ) # ID", "$$ = ['local', $5, $2]"],		
+			["# ID", "$$ = ['local', $2]"],
 		],
 		Elem: [
 			["Expr", "$$ = [$1]"],
