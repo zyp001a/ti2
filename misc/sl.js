@@ -825,6 +825,7 @@ async function blockExec(b, conf, stt){
 	}
 }
 async function tplCall(str, args, conf){
+	if(!str) return "";
 	var tstr = tplparser.parse(str);
 	var scope = scopeNew(def);
 	var obj = await progl2obj(scope, tstr);
