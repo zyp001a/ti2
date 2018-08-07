@@ -60,8 +60,8 @@ classNew(def, "ClassMeta")
 classNew(def, "Scope")
 
 classNew(def, "Struct")
-classNew(def, "Callable")
-classNew(def, "Raw", [def.Callable])
+classNew(def, "Raw")
+classNew(def, "Callable", [def.Raw])
 classNew(def, "Struct", [def.Raw])
 
 classNew(def, "Undf", [def.Raw], {
@@ -166,10 +166,11 @@ funcNew(def, "global", function(){
 	var self = this;
 	return self.x.global;
 })
-
+funcNew(def, "val", async function(p){//property get val
+	return p.val;	
+}, [["p"]])
 funcNew(def, "pget", async function(p, k){//property get
-	return await exec(p[k], this);
-	
+	return await exec(p[k], this);	
 }, [["p"], ["k"]])
 funcNew(def, "oget", function(p, k){//___ get
 	return p.___[k];
@@ -193,13 +194,25 @@ funcNew(def, "haskey", async function(p, k){
 	return await scopeGet(p, k)  
 }, [["p"], ["k"]])
 funcNew(def, "aget", function(p, k){
-  if(!p.___) die("error")
+  if(!p.___ && typeof p != "string"){
+		log(p)
+		log(k)		
+		die("error")
+	}
 	return p[k]
 }, [["p"], ["k"]])
+funcNew(def, "aset", function(p, k, v){
+  if(!p.___ && typeof p != "string"){
+		log(p)
+		log(k)		
+		die("error")
+	}
+	return p[k] = v
+}, [["p"], ["k"], ["v"]])
 funcNew(def, "concat", function(p, k, v){
 	return p[k] += v;
 }, [["p"], ["k"], ["v"]])
-funcNew(def, "splus", function(l, r){
+funcNew(def, "splus", function(l, r){//string add
 	return l + r;
 }, [["l"], ["r"]])
 funcNew(def, "plus", function(l, r){
@@ -211,6 +224,54 @@ funcNew(def, "minus", function(l, r){
 funcNew(def, "times", function(l, r){
 	return l * r;
 }, [["l"], ["r"]])
+funcNew(def, "obelus", function(l, r){
+	return l / r;
+}, [["l"], ["r"]])
+funcNew(def, "mod", function(l, r){
+	return l % r;
+}, [["l"], ["r"]])
+funcNew(def, "lshift", function(l, r){
+	return l << r;
+}, [["l"], ["r"]])
+funcNew(def, "rshift", function(l, r){
+	return l >> r;
+}, [["l"], ["r"]])
+funcNew(def, "gt", function(l, r){
+	return l > r;
+}, [["l"], ["r"]])
+funcNew(def, "ge", function(l, r){
+	return l >= r;
+}, [["l"], ["r"]])
+funcNew(def, "lt", function(l, r){
+	return l < r;
+}, [["l"], ["r"]])
+funcNew(def, "le", function(l, r){
+	return l < r;
+}, [["l"], ["r"]])
+funcNew(def, "eq", function(l, r){
+	return l == r;
+}, [["l"], ["r"]])
+funcNew(def, "ne", function(l, r){
+	return l != r;
+}, [["l"], ["r"]])
+funcNew(def, "not", function(l){
+	return !l;
+}, [["l"]])
+funcNew(def, "defined", function(l){
+	return l != undefined;
+}, [["l"]])
+funcNew(def, "uc", function(l){
+	return l.toUpperCase();
+}, [["l"]])
+funcNew(def, "lc", function(l){
+	return l.toLowerCase();
+}, [["l"]])
+funcNew(def, "len", function(l){
+	return l.length;
+}, [["l"]])
+funcNew(def, "strlen", function(l){
+	return l.length;
+}, [["l"]])
 
 funcNew(def, "isleaf", function(o){
 	if(typeof o != "object") return 0;
@@ -218,6 +279,9 @@ funcNew(def, "isleaf", function(o){
 	return 1
 }, [["o"]])
 
+funcNew(def, "fileRead", function(f, c){
+	return fs.readFileSync(f).toString();	
+})
 funcNew(def, "fileWrite", function(f, c){
 	return fs.writeFileSync(f, c);
 }, [["f"], ["c"]])
@@ -231,7 +295,12 @@ funcNew(def, "exec", async function(o, conf){
 funcNew(def, "call", async function(r, args){
 	return await call(r, args, this, 1);
 }, [["r"], ["args"]], 1)
-
+funcNew(def, "and", async function(l, r){
+	return (await exec(l, this)) && (await exec(r, this));
+}, [["l"], ["r"]], 1)
+funcNew(def, "or", async function(l, r){
+	return (await exec(l, this)) || (await exec(r, this));
+}, [["l"], ["r"]], 1)
 
 
 var execarg = [["o"]];
@@ -246,7 +315,7 @@ funcNew(execsp, "Call", async function(o){
 
 funcNew(execsp, "Arr$elementCallable", async function(o){
 	var self = this;
-	var arrx = [];
+	var arrx = objNew(def.Arr, []);
 	for(var i in o.val){
 		arrx[i] = await exec(o.val[i], self);
 	}
@@ -281,17 +350,46 @@ funcNew(execsp, "Ctrl", async function(o){
 		var l = o.args.length;
 		var i;
 		for(i=0;i<l-1;i+=2){
-			if(await exec(o.args[i], self)){
+			var c = await exec(o.args[i], self);
+			if(c){
 				return await blockExec(o.args[i+1], self);
 			}
 		}
 		if(l%2 == 1){
 			return await blockExec(o.args[l-1], self);			
 		}
+		break;
 	case "for":
+		await exec(o.args[0], self);
+		while(1){
+			var c = await exec(o.args[1], self);
+			if(c){
+				var r = await blockExec(o.args[3], self);
+				if(typeof r == "object" && r.ctrl){
+					if(r.ctrl.val == "return")
+						return r;
+					if(r.ctrl.val == "break")
+						break;
+					if(r.ctrl.val == "continue")
+						continue;
+				}
+			}else{
+				break;
+			}
+			await exec(o.args[2], self);
+		}
+		break;
 	case "while":
 		while(await exec(o.args[0], self)){
 			var r = await blockExec(o.args[1], self);
+			if(typeof r == "object" && r.ctrl){
+				if(r.ctrl.val == "return")
+					return r;
+				if(r.ctrl.val == "break")
+					break;
+				if(r.ctrl.val == "continue")
+					continue;
+			}		
 		}
 		break;
 	case "foreach":
@@ -301,6 +399,14 @@ funcNew(execsp, "Ctrl", async function(o){
 		for(var i in arr){
       scopeSet(x, k, arr[i])
 			var r = await blockExec(o.args[2], self);
+			if(typeof r == "object" && r.ctrl){
+				if(r.ctrl.val == "return")
+					return r;
+				if(r.ctrl.val == "break")
+					break;
+				if(r.ctrl.val == "continue")
+					continue;
+			}			
 		}
 		break;    
 	case "each":
@@ -319,8 +425,7 @@ funcNew(execsp, "Ctrl", async function(o){
 	return o;
 }, [["o"]])
 
-var objList = {};
-objList.undf = objNew(def.Undf, {val: undefined})
+var undf = objNew(def.Undf, {val: undefined})
 //parser function
 function valCopy(item){
   let result = undefined;
@@ -341,6 +446,7 @@ function valCopy(item){
   return result || item;
 }
 function callNew(func, args){
+	if(!func) die("func not defined")
 	if(!args) args = objNew(def.Arr, []);
 	if(!args.___) args = objNew(def.Arr, args);
 	return objNew(def.Call, {
@@ -350,10 +456,10 @@ function callNew(func, args){
 }
 //internal function
 function fbNew(block, argdef){
-	return objNew(def.FuncBlock, {
-		block: block,
-		argdef: argdef,
-	})
+	var oo = routeInit();
+	oo.block = block;
+	oo.argdef = argdef;
+	return objNew(def.FuncBlock, oo)
 }
 function ftNew(str){
 	var oo = routeInit();
@@ -408,8 +514,8 @@ function extname(conf){
 	for(var k in conf){
 		r+=k;
 		var v = conf[k];
-		switch(rawType(v)){
-		case "Class":
+		switch(type(v)){
+		case "ClassMeta":
 			r+=v.__.id.replace("_", "");
 			break;
 		case "Num":
@@ -420,8 +526,15 @@ function extname(conf){
 			break;
 		case "Dic":
 			r+=extname(v)
+			break;
+		case "Undf":
+			break;
+		case "Obj":
+			log(v)
+			die();			
+			break;
 		default:
-			die("TODO: "+rawType(v))					
+			die("TODO: "+type(v))					
 		}
 	}
 	return r;
@@ -499,7 +612,8 @@ function scopeInit(parents){
   for(var i in parents){
     x.parents[parents[i].__.id] = parents[i];
   }
-	x.index = 0;
+	x.index = 0;	
+//	x.indc = 0;
 	return p;
 }
 function scopeNew(pscope, k, parents){//TODO
@@ -535,6 +649,10 @@ async function scopeGetSub(scope, key, cache){
 	if(v){
     return v;
   }
+	if(!scope.__){
+		console.log(key)		
+		die("global or state not defined: " + key);
+	}	
 	let str = await dbGet(scope, key);
 	if(str){
 		str = key + " = " + str
@@ -625,7 +743,7 @@ function haskeyr(x, k){
   }
 }
 async function istype(obj, type){
-  
+  var t = type(obj);
 }
 function type(obj){
   if(obj.___) return obj.___.type;
@@ -741,7 +859,7 @@ async function call(func, argsn, conf, rawflag){
 	x.stack.push(x.state);
 	x.state = state;
 	var r = await blockExec(func.block, conf);
-	if(rawType(r) == "Obj" && r.ctrl == "return")
+	if(rawType(r) == "Obj" && r.ctrl && r.ctrl.val == "return")
     r = r.return;
 	x.state = x.stack.pop();
 	return r;
@@ -779,7 +897,7 @@ function raw2obj(r){
 	case "Str":
 		return objNew(def.Str, {val: r});
 	case "Undf":
-		return objList.undf;
+		return undf;
 	default:
 		return r;
 	}
@@ -797,6 +915,8 @@ async function ast2obj(scope, ast){
 	var v = ast[1];
 	var v2 = ast[2];	
   switch(t){
+	case "undf":
+		return undf;
 	case "num":
 		var p = {};
 		var c = 1;
@@ -804,19 +924,19 @@ async function ast2obj(scope, ast){
 			var l = v[v.length-1];
 			switch(l){
 			case "u":
-				p.unsigned = 1;
+				p.unsigned = undefined;
 				break;
 			case "s":
-				p.storage = "short";
+				p.short = undefined;
 				break;
 			case "l":
-				p.storage = "long";
+				p.long = undefined;
 				break;
 			case "b":
-				p.storage = "big";
+				p.big = undefined;
 				break;
 			case "f":
-				p.storage = "float";
+				p.float = undefined;
 				break;
 			default:
 				c = 0;
@@ -824,9 +944,14 @@ async function ast2obj(scope, ast){
 			}
 			v = v.substr(0, v.length - 1);			
 		}
-		if(v.match("\\.")) p.float = 1;
-		if(v.match(/[eE]/)) p.sci = 1;
-		if(v.match(/[xX]/)) p.hex = 1;
+		if(v.match("\\.")){
+			if(!haskey(p, "float")) p.double = undefined;
+		}else{
+			if(!haskey(p, "short") && !haskey(p, "long") && !haskey(p, "big"))
+				p.int = undefined
+		}
+		if(v.match(/[eE]/)) p.sci = undefined;
+		if(v.match(/[xX]/)) p.hex = undefined;
 		p.val = Number(v);
 		return objNew(def.Num, p);
 		
@@ -850,11 +975,11 @@ async function ast2obj(scope, ast){
 			//predefine not call assign
 			var res;
 			if(t == "func"){
-				var ori = fbNew()
+				var ori = fbNew();
 				route(scope, v[0][1], ori);
 				res = await ast2obj(scope, v[1]);
-				ori.block = res.block
-				ori.labels = res.labels
+				ori.block = res.block;
+				ori.argdef = res.argdef;
 			}else{
 				res = await ast2obj(scope, v[1]);
 				route(scope, v[0][1], res);
@@ -871,17 +996,23 @@ async function ast2obj(scope, ast){
 			args[0] = getv.__.parent;
 			args[1] = raw2obj(getv.__.name);
 		}
-		if(!v[2]){
+		if(!v[2]){//not += -=
+			if(getv.func.__.name == "aget")
+				return callNew(def.aset, args);				
 			return callNew(def.set, args);
 		}
 		if(v[2] == "splus"){
 			return callNew(def.concat, args);
 		}
 		args[2] = callNew(def[v[2]], [getv, args[2]]);
+		if(getv.func.__.name == "aget")
+			return callNew(def.aset, args);						
 		return callNew(def.set, args);
 		
 	case "idf":
-		return (await scopeGet(scope, v)).value;
+		var r =	await scopeGet(scope, v);
+		if(!r) die(v + " is not defined");
+		return r.value;
 		
 	case "id":
 		var a0;
@@ -940,6 +1071,7 @@ async function ast2obj(scope, ast){
 			a[1] = await ast2obj(scope, argdef[1]);
 		block[2] = "Block";
 		var nscope = scopeNew(scope);
+//		nscope.__.indc = scope.__.indc + 1;
 		for(var i in a0){
 			var d = a0[i];
 			nscope[i] = nscope[d[0]] = {type: d[1]};
@@ -978,15 +1110,16 @@ async function ast2obj(scope, ast){
 				var x = v[i];
 				var y = await ast2obj(scope, x[0]);
 				dicx[x[1]] = y;
-				if(!iscallable && istype(y, "Callable")){
+				if(!iscallable && y && !haskey(y, "val")){
 					iscallable = 1;
 				}
 			}
 			var c;
-			if(iscallable)
+			if(iscallable){
 				c = classSub(def.Dic, {element: def.Callable});
-			else
+			}else{
 				c = def.Dic;
+			}
 			return objNew(c, dicx);			
 		}
 	case "ctrl":
@@ -997,19 +1130,19 @@ async function ast2obj(scope, ast){
 		});
 		return r;
 	case "subclass":
-		var c = ast2obj(scope, v);
-		var dic = ast2obj(scope, v2);
+		var c = await ast2obj(scope, v);
+		var dic = await ast2obj(scope, v2);
 		if(type(dic) == "Dic$elementCallable")
-			die("dynmaic expression not allowed in subclass definition");		
+			die("dynmaic expression not allowed in subclass definition");
 		return classSub(c, dic);
 	case "class":
-		var arr = ast2arr(scope, v);
-		var dic = ast2obj(scope, v2);
+		var arr = await ast2arr(scope, v);
+		var dic = await ast2obj(scope, v2);
 		if(type(dic) == "Dic$elementCallable")
 			die("dynmaic expression not allowed in class definition");
 		return classInit(arr, dic);
 	case "scope":
-		var arr = ast2arr(scope, v);
+		var arr = await ast2arr(scope, v);
 		return scopeInit(arr);
 	default:
 		console.log(ast);

@@ -15,6 +15,7 @@ var grammar = {
 //			["#[^\\n\\r]+[\\n\\r]*", "return;"],			
 			["@`(\\\\.|[^\\\\`])*`", 
 			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\([`~\\&])/g, '$1'); return 'TPL';"],
+			["@\'(\\\\.|\\.)\'", "yytext = yytext.substr(2, yyleng-3); return 'CHAR'"],
 			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"|`(\\\\.|[^\\\\`])*`",
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t'; return n;}); return 'STR';"], 
 //			["\<[a-zA-Z0-9_\\\/\\s]*\>",
@@ -24,7 +25,7 @@ var grammar = {
 			["\\$?[a-zA-Z_][a-zA-Z0-9_]*\\$?", "return 'ID'"],
 			["\\$[0-9]+", "yytext = yytext.substr(1);return 'LOCAL'"],			
 //TODO bignumber
-      ["{int}{frac}?{exp}?u?[slbf]?\\b", "return 'NUM';"],
+      ["\\b{int}{frac}?{exp}?u?[slbf]?\\b", "return 'NUM';"],
       ["0[xX][a-zA-Z0-9]+\\b", "return 'NUM';"],
 			["@if", "return 'IF'"],
 			["@else", "return 'ELSE'"],
@@ -37,7 +38,6 @@ var grammar = {
 			["@for", "return 'FOR'"],
 			["@each", "return 'EACH'"],
 			["@while", "return 'WHILE'"],
-			["@switch", "return 'SWITCH'"],						
 			["\\=\\>", "return '=>'"],
 			["\\-\\>", "return '->'"], 
       ["\\(", "return '('"],
@@ -167,7 +167,8 @@ var grammar = {
 			["If", "$$ = ['ctrl', 'if', $1]"],
 			["WHILE Expr Dic", "$$ = ['ctrl', 'while', [$2, $3]]"],
 			["FOR Expr , Expr , Expr Dic", "$$ = ['ctrl', 'for', [$2, $4, $6, $7]]"],
-			["FOREACH Expr , Expr Dic", "$$ = ['ctrl', 'foreach', [$2, $4, $5]]"],      
+			["FOREACH Expr , Expr Dic", "$$ = ['ctrl', 'foreach', [$2, $4, $5]]"],
+			["EACH Expr , Expr , Expr Dic", "$$ = ['ctrl', 'foreach', [$2, $4, $6, $7]]"],
 			["RETURN Expr", "$$ = ['ctrl', 'return', [$2]]"],
 			["BREAK", "$$ = ['ctrl', 'break']"],
 			["CONTINUE", "$$ = ['ctrl', 'continue']"],
@@ -177,16 +178,10 @@ var grammar = {
 			["If ELIF Expr Dic", "$$ = $1; $1.push($3); $1.push($4)"],
 			["If ELSE Dic", "$$ = $1; $1.push($3)"],
 		],
-		Natl: "$$ = ['natl', $1.split(/\\s+/)]",
 		KeyColon: [
 			["ID :", "$$ = $1"],
 			["STR :", "$$ = $1"],
 			["NUM :", "$$ = $1"],
-		],
-		KeyHash: [
-			["ID #", "$$ = $1"],
-			["STR #", "$$ = $1"],
-			["NUM #", "$$ = $1"],
 		],
 		Elems: [
       [",", "$$ = [];"],			
@@ -214,14 +209,14 @@ var grammar = {
 			["( Expr ) [ Expr ]", "$$ = ['arrget', $2, $5]"],
 		],
 		"FUNC": [
-			["& Dic", "$$ = [$2]"],
+			["& Dic", "$$ = [$2, [[]]]"],
 			["& Args Dic", "$$ = [$3, $2]"],
 		],
 		"Args": [
 			["( )", "$$= [[]]"],
 			["( Subdefs )", "$$= [$2]"],
-			["( Subdefs ~ ID)", "$$= [$2, $4]"],
-			["( ~ ID )", "$$= [[], $3]"],
+			["Cn ( Subdefs )", "$$= [$3, $1]"],
+			["Cn ( )", "$$= [[], $1]"],
 		],
     "Subdefs": [
       ["Subdef", "$$ = [$1]; "],
@@ -229,7 +224,7 @@ var grammar = {
     ],
 		"Subdef": [
 			["ID", "$$ = [$1]"],
-			["KeyHash Id", "$$ = [$1, $2]"],
+			["KeyColon Cn", "$$ = [$1, $2]"],
 		],
 		"Call": [
 			["Id CallArgs", "$$ = ['call', $1, $2];"],
@@ -253,7 +248,7 @@ var grammar = {
 			["ID", "$$ = ['idf', $1]"]
 		],
 		"SubClass": [
-			["ID { Exprs }", "$$ = ['subclass', ['idf', $1], ['dic', $3, 'Dic']];"],
+			["ID { Elems }", "$$ = ['subclass', ['idf', $1], ['dic', $3, 'Dic']];"],
 		],
 		"CallArgs": [
 			["( )", "$$ = []"],
@@ -316,5 +311,3 @@ var options = {};
 var code = new jison.Generator(grammar, options).generate();
 var filename = process.argv[2];
 fs.writeFileSync(filename, code);
-
-
