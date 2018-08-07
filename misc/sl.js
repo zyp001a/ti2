@@ -652,26 +652,38 @@ async function scopeGetSub(scope, key, cache){
 	if(!scope.__){
 		console.log(key)		
 		die("global or state not defined: " + key);
-	}	
+	}
 	let str = await dbGet(scope, key);
 	if(str){
-		str = key + " = " + str
 		//TODO scope get sub
-		var rtn = await progl2obj(scope, str);
-//		route(scope, key, rtn);
-		return haskey(scope, key);
+		var m = key.match(/^(\S+)_([^_]+)$/);
+		var nscope;
+		if(m){
+			nscope = await scopeGetOrNew(scope, m[1]);
+			key = m[2];
+		}else{
+			nscope = scope;
+		}
+		str = key + " = " + str		
+		var rtn = await progl2obj(nscope, str);
+		return haskey(nscope, key);
 	}
 	for(var k in scope.__.parents){
 		if(cache[k]) continue;
 		cache[k] = 1;
 		var r = await scopeGetSub(scope.__.parents[k], key, cache);
-		if(r) return r;
+		if(r){
+//			scope[key] = r.value;
+			return r;
+		}
 	}
 }
 async function scopeGet(scope, key){
   var cache = {};
 	var r = await scopeGetSub(scope, key, cache);
-	if(r) return r
+	if(r){
+		return r;
+	}
 	if(scope.__.parent){
 		var r2 = await scopeGet(scope.__.parent, key);
     return r2;
@@ -872,11 +884,11 @@ function dbPath(x){
 		ns = "/" + x.__.ns
 	if(!x.__.id)
 		return ns;
-	return ns + "/" + x.__.id.replace("_", "/")
+	return ns + "/" + x.__.id.replace(/_/g, "/")
 }
 async function dbGet(scope, key){
 	if(scope.__.tmp) return "";
-	var p = prefix + dbPath(scope) + "/"+ key;
+	var p = prefix + dbPath(scope) + "/"+ key.replace(/_/g, "/");
 	if(fs.existsSync(p+".sl")){
 		return fs.readFileSync(p+".sl").toString();
 	}
@@ -1011,7 +1023,7 @@ async function ast2obj(scope, ast){
 		
 	case "idf":
 		var r =	await scopeGet(scope, v);
-		if(!r) die(v + " is not defined");
+		if(!r) die(v + " is not defined, "+dbPath(scope));
 		return r.value;
 		
 	case "id":
