@@ -54,37 +54,68 @@ var prefix = process.env.HOME+"/soul/db";
 var root = scopeNew();
 var execsp = scopeNew(root, "exec");
 var def = scopeNew(root, "def");
-classNew(def, "Class")
+classNew(def, "Class")//class determine obj keys
 
-classNew(def, "ClassMeta")
-classNew(def, "Scope")
+classNew(def, "Meta", [def.Class], {
+	metaConstr: def.Func,
+	metaGetter: def.Func,
+	metaSetter: def.Func,
+})
+classNew(def, "Obj")
 
-classNew(def, "Struct")
-classNew(def, "Raw")
-classNew(def, "Callable", [def.Raw])
-classNew(def, "Struct", [def.Raw])
 
-classNew(def, "Undf", [def.Raw], {
-	default: {val: undefined}
+
+classNew(def, "Enum")
+classNew(def, "Func")
+
+classNew(def, "Single", undefined, {
+	single: def.Class
 })
-classNew(def, "Num", [def.Raw], {
-	default: {val: 0}
+
+classNew(def, "Null")
+classNew(def, "True")
+
+classNew(def, "Consist", undefined, {
+	consist: classInit(def.Arr, {
+		element: def.Meta
+	})
 })
-classNew(def, "Str", [def.Raw], {
-	default: {val: ""}
+
+classNew(def, "Callable", undefined, {
+	callable: def.True
 })
-classNew(def, "Function", [def.Raw], {
-	default: {val: function(){}}
+
+
+
+classNew(def, "Val", [def.Val], {
+	valType: classInit([def.Enum], {
+		enum:["Num", "Str", "ValFunc", "Dic", "Arr"]
+	})
+})
+
+classNew(def, "Num", [def.Val], {
+	valType: "Num"
+})
+classNew(def, "Str", [def.Val], {
+	valType: "Str"
+})
+classNew(def, "ValFunc", [def.Val], {
+	valType: "ValFunc"
 });
+classNew(def, "Arr", [def.Val], {
+	valType: "Arr"
+})
+classNew(def, "Dic", [def.Val], {
+	valType: "Dic"
+})
 
-classNew(def, "Arr", [def.Struct], {
-	default: []
+classNew(def, "Scope", [def.Class], {
+	scope: def.Dic
 })
-classNew(def, "Dic", [def.Struct], {
-	default: {}	
-})
-classNew(def, "Argdef", [def.Struct], {
-	default: [[]]	
+
+classNew(def, "Argdef", [def.Class], {
+	argdefReturn: def.Meta,
+	
 })
 
 classNew(def, "Func", [def.Struct]);
@@ -101,9 +132,9 @@ classNew(def, "Ctrl", [def.Struct], {
 		return: def.Class
 	}
 })
-classNew(def, "Var", [def.Raw], {
+classNew(def, "Var", [def.Val], {
 	schema: {
-		type: def.ClassMeta
+		type: def.Meta
 	}
 })
 classNew(def, "Block", [def.Struct], {
@@ -332,7 +363,7 @@ funcNew(execsp, "Dic$elementCallable", async function(o){
 funcNew(execsp, "Main", async function(o){
 	return await blockExec(o.content, this)
 }, execarg)
-funcNew(execsp, "Raw", function(o){
+funcNew(execsp, "Val", function(o){
 	return o.val;
 }, execarg)
 funcNew(execsp, "Struct", function(o){
@@ -456,18 +487,18 @@ function callNew(func, args){
 }
 //internal function
 function fbNew(block, argdef){
-	var oo = routeInit();
+	var oo = objInit();
 	oo.block = block;
 	oo.argdef = argdef;
 	return objNew(def.FuncBlock, oo)
 }
 function ftNew(str){
-	var oo = routeInit();
+	var oo = objInit();
 	oo.str = objNew(def.Str, {val: str});
 	return objNew(def.FuncTpl, oo);
 }
 function funcNew(scope, name, func, argdef, flagraw){
-	var oo = routeInit();
+	var oo = objInit();
 	oo.argdef = objNew(def.Argdef, argdef);
 	oo.func = objNew(def.Func, {val: func});
 	var o = objNew(def.FuncNative, oo);
@@ -515,7 +546,7 @@ function extname(conf){
 		r+=k;
 		var v = conf[k];
 		switch(type(v)){
-		case "ClassMeta":
+		case "Meta":
 			r+=v.__.id.replace("_", "");
 			break;
 		case "Num":
@@ -569,7 +600,7 @@ function route(pscope, name, p){
 	x.parent = pscope
 	return p;
 }
-function routeInit(){
+function objInit(){
 	var p = {};
 	p.__ = {}
 	Object.defineProperty(p, '__', {
@@ -579,7 +610,7 @@ function routeInit(){
 	return p;
 }
 function classInit(cla, conf){
-	var p = routeInit();
+	var p = objInit();
 	var x = p.__;
 	for(var k in conf){
 		x[k] = conf[k];
@@ -599,14 +630,23 @@ function classNew(pscope, name, cla, conf){
 	route(pscope, name, p);
 	return p;
 }
+function specInit(c, dic){
+	var p = objInit();	
+	
+}
+function specNew(pscope, name, c, dic){
+	var p = specInit(c, dic);
+	route(pscope, name, p)
+	return p;
+}
 function varNew(pscope, name, cla){
-	var p = routeInit();
+	var p = objInit();
 	route(pscope, name, p);
 	p.type = cla;
 	return p;
 }
 function scopeInit(parents){
-	var p = routeInit();
+	var p = objInit();
 	var x = p.__;
 	x.parents = {};
   for(var i in parents){
@@ -760,7 +800,7 @@ async function istype(obj, type){
 function type(obj){
   if(obj.___) return obj.___.type;
 	if(obj.__.index) return "Scope";
-	return "ClassMeta";
+	return "Meta";
 }
 async function execGet(sp, esp, t, cache){
   if(!cache) cache = {};
