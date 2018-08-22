@@ -56,116 +56,94 @@ var execsp = scopeNew(root, "exec");
 var def = scopeNew(root, "def");
 classNew(def, "Class")//class determine obj keys
 
-classNew(def, "Meta", [def.Class], {
-	metaConstr: def.Func,
-	metaGetter: def.Func,
-	metaSetter: def.Func,
-})
-classNew(def, "Obj")
+classNew(def, "Primitive") //special class
 
+classNew(def, "Meta")
+classNew(def, "Cons")
 
-
-classNew(def, "Enum")
-classNew(def, "Func")
-
-classNew(def, "Single", undefined, {
-	single: def.Class
+classNew(def, "Singleton", [def.Class], {
+	singleton: def.Class
 })
 
-classNew(def, "Null")
-classNew(def, "True")
-
-classNew(def, "Consist", undefined, {
-	consist: classInit(def.Arr, {
-		element: def.Meta
-	})
-})
-
-classNew(def, "Callable", undefined, {
-	callable: def.True
-})
-
-
-
-classNew(def, "Val", [def.Val], {
-	valType: classInit([def.Enum], {
-		enum:["Num", "Str", "ValFunc", "Dic", "Arr"]
-	})
-})
-
-classNew(def, "Num", [def.Val], {
-	valType: "Num"
-})
-classNew(def, "Str", [def.Val], {
-	valType: "Str"
-})
-classNew(def, "ValFunc", [def.Val], {
-	valType: "ValFunc"
+consNew(def, "Null", def.Singleton, {
+	singleton: undefined
 });
-classNew(def, "Arr", [def.Val], {
-	valType: "Arr"
+consNew(def, "True", def.Singleton, {
+	singleton: true
 })
-classNew(def, "Dic", [def.Val], {
-	valType: "Dic"
+
+classNew(def, "Unevaled", undefined, {
+	unevaled: def.True
 })
+
+classNew(def, "Val", [def.Class], { //Primitive wrappers
+	val: def.Primitive
+})
+
+classNew(def, "Set", [def.Val], {
+	setEtype: def.Meta
+})
+
+consNew(def, "Num", def.Val, {})
+consNew(def, "Str", def.Val, {})
+consNew(def, "ValFunc", def.Val, {});
+consNew(def, "Arr", def.Set, {})
+consNew(def, "Dic", def.Set, {})
 
 classNew(def, "Scope", [def.Class], {
-	scope: def.Dic
+	scopeRoute: def.Str,
+	scopeParents: def.Dic,
 })
 
 classNew(def, "Argdef", [def.Class], {
 	argdefReturn: def.Meta,
-	
+	argdefIn: consInit(def.Arr, {
+		setEtype: def.Meta
+	})
 })
 
-classNew(def, "Func", [def.Struct]);
-classNew(def, "Call", [def.Struct], {
-	schema: {
-		func: def.Func,
-		args: def.Arr,
-	}
-})
-classNew(def, "Ctrl", [def.Struct], {
-	schema: {
-		type: def.Str,
-		args: def.Arr,
-		return: def.Class
-	}
-})
-classNew(def, "Var", [def.Val], {
-	schema: {
-		type: def.Meta
-	}
-})
-classNew(def, "Block", [def.Struct], {
-	schema: {
-		arr: def.Arr,
-		labels: classSub(def.Dic,{element:def.Str})
-	}
-})
-classNew(def, "FuncNative", [def.Func], {
-	schema: {
-		func: def.Function,
-		argdef: def.Argdef
-	}
+classNew(def, "Func", [def.Class], {
+	func: def.Class,
+	funcArgdef: def.Argdef
 });
-classNew(def, "FuncBlock", [def.Func], {
-	schema: {
-		block: def.Block,
-		argdef: def.Argdef
-	}	
+classNew(def, "Call", [def.Class], {
+	callFunc: def.Func,
+	callArgs:	def.Arr,
+})
+classNew(def, "Ctrl", [def.Class], {
+	ctrlType: def.Str,
+	ctrlArgs: def.Arr,
+	ctrlReturn: def.Class
+})
+classNew(def, "Block", [def.Class], {
+	block: def.Arr,
+	blockLabels: consInit(def.Dic,{
+		setEtype:def.Str
+	})
+})
+consNew(def, "FuncNative", def.Func, {
+	func: def.ValFunc,
 });
-classNew(def, "FuncTpl", [def.Func], {
-	schema: {
-		str: def.Str
-	}
+consNew(def, "FuncBlock", def.Func, {
+	func: def.Block,
+});
+consNew(def, "FuncTpl", def.Func, {
+	func: def.Str,
 });
 
-classNew(def, "Main", [def.Struct], {
-	schema: {
-		content: def.Block
-	}
+classNew(def, "Main", [def.Class], {
+	main: def.Block
 });
+def.Meta.meta = {
+	metaConstr: def.Func,
+	metaGetter: def.Dic,
+	metaSetter: def.Dic,
+	metaParents: def.Dic,
+	meta: def.Dic
+}
+def.Cons.meta = {
+	cons: def.Dic
+}
 
 funcNew(def, "log", function(s){
 	console.log(s);
@@ -576,6 +554,61 @@ function classSub(c, conf){
 		return c.__.parent[name];
   return classNew(c.__.parent, name, [c], conf);
 }
+function s(x, k, v){
+	return w(x)[k] = v	
+}
+function g(x, k){
+	return w(x)[k];
+}
+function w(x){
+	if(ptype(x) == "Obj"){
+		return x.val;
+	}
+	return x;
+}
+function rw(x){
+	var t = ptype(x);
+	if(t == "Obj"){
+		return x
+	}
+	return objNew(def[t], {val: x});
+}
+
+function ptype(e){
+	switch(typeof e){
+  case "boolean":
+    return "Num";
+  case "undefined":
+    return "Null";
+  case "number":
+    return "Num";
+  case "string":
+    return "Str";
+  case "object":
+		if(e == null) return "Null";
+		var x = Object.getOwnPropertyDescriptor(e, '__');
+		if(x && !x.enumerable){
+			return "Obj";
+		}
+		if(Array.isArray(x)) return "Arr"
+		return "Dic";
+	case "function":
+		return "ValFunc";
+  default:
+    die("wrong cpt type", e);
+  }	
+}
+/*
+route:
+name
+id
+ns
+scope
+tmp
+obj:
+class
+cons
+*/
 function route(pscope, name, p){
 	if(!p) die("error");
 	var x = p.__;
@@ -597,7 +630,7 @@ function route(pscope, name, p){
   	x.id = pscope.__.id + "_" + name;
 		x.ns = pscope.__.ns;				
   }
-	x.parent = pscope
+	x.scope = pscope
 	return p;
 }
 function objInit(){
@@ -609,34 +642,41 @@ function objInit(){
 	});
 	return p;
 }
-function classInit(cla, conf){
-	var p = objInit();
+function classInit(clas, conf){
+	var p = objInit(clas);
 	var x = p.__;
+	p.meta = {};
+	p.metaParents = {};	
 	for(var k in conf){
-		x[k] = conf[k];
+		p.meta[k] = conf[k];
 	}
 	x.parents = {};
-  if(!cla){
+  if(!clas){
 		if(!def.Class) def.Class = p;
-		cla = [def.Class];
+		clas = [def.Class];
 	}
-  for(var i in cla){
-    x.parents[cla[i].__.id] = cla[i];//TODO reduce class tree
+  for(var i in clas){
+    x.metaParents[clas[i].__.id] = clas[i];//TODO reduce class tree
   }
 	return p;
 }
-function classNew(pscope, name, cla, conf){
-	var p = classInit(cla, conf);
+function classNew(pscope, name, clas, conf){
+	var p = classInit(clas, conf);
 	route(pscope, name, p);
 	return p;
 }
-function specInit(c, dic){
-	var p = objInit();	
+function consInit(c, dic){
+	var p = objInit();
 	
 }
-function specNew(pscope, name, c, dic){
-	var p = specInit(c, dic);
-	route(pscope, name, p)
+function consEtype(c, etype){
+	return consInit(c, {
+		setEtype: etype
+	})
+}
+function consNew(pscope, name, c, dic){
+	var p = consInit(c, dic);
+	route(pscope, name, p);
 	return p;
 }
 function varNew(pscope, name, cla){
