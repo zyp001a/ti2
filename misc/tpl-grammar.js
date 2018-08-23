@@ -8,6 +8,7 @@ var grammar = {
 			["[\\t ]*~[^=](\\\\.|[^\\\\\~])*~[\\n\\r]*",	"yytext = yytext.replace(/^[\\t ]*~/, '').replace(/~[\\n\\r]*$/, '').replace(/\\\\~/g, '~'); return 'INS';"],
 			//			["~(\\\\.|[^\\\\\~])*~",	"yytext = yytext.substr(1,yyleng-2).replace(/\\\\~/g, '~'); return 'INS';"],
 			["\\&[0-9]+", "yytext=yytext.substr(1);return 'EXEC'"],
+//			["\\&[A-Z]+", "yytext=yytext.substr(1);return 'MACRO'"],			
 			["(\\\\.|[^\\\\\~])", "return 'RAW';"]
 		]
 	},
@@ -24,7 +25,8 @@ var grammar = {
 		"E": [
 			["GET", "$$ = '`);push(#$arr, ' + $1 + ');push(#$arr, `'"],
 			["INS", "$$ = '`);' + $1 + ';push(#$arr, `'"],
-			["EXEC", "$$ = '`);push(#$arr, exec($' + $1 + ', #$conf));push(#$arr, `'"],			
+			["EXEC", "$$ = '`);push(#$arr, exec($' + $1 + ', #$conf));push(#$arr, `'"],
+//			["MACRO", "$$ = '`);' + $1 + ';push(#$arr, `'"],
 			["RAW", "$$ = $1"],
 		],
   }

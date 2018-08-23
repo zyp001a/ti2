@@ -23,7 +23,7 @@ var grammar = {
       ["\\\\[\\r\\n;]+", "return"],//allow \ at end of line
 			["\\b\\_\\b", "return 'UNDF'"],
 			["\\$?[a-zA-Z_][a-zA-Z0-9_]*\\$?", "return 'ID'"],
-			["\\$[0-9]+", "yytext = yytext.substr(1);return 'LOCAL'"],			
+//			["\\#[0-9]+", "yytext = yytext.substr(1);return 'LOCAL'"],			
 //TODO bignumber
       ["\\b{int}{frac}?{exp}?u?[slbf]?\\b", "return 'NUM';"],
       ["0[xX][a-zA-Z0-9]+\\b", "return 'NUM';"],
@@ -62,6 +62,7 @@ var grammar = {
 			["\\/\\=", "return '/='"],
 			["\\|\\|", "return '||'"],
 			["\\&\\&", "return '&&'"],
+			["\\#\\#", "return '##'"],			
       ["\\#", "return '#'"],			
       ["\\>", "return '>'"],
       ["\\<", "return '<'"],
@@ -98,7 +99,7 @@ var grammar = {
     ["left", "*", "/", "%"],
     ["left", "++", "--"],		
     ["right", "&", "@", "|"],
-    ["left", "#"],				
+    ["left", "#", "##"],				
     ["right", "!"],
 		["left", "(", ")", "[", "]", "{", "}"],		 
 	],
@@ -151,10 +152,16 @@ var grammar = {
     ],
 		Id: [
 			["ID", "$$ = ['id', $1]"],
-			["LOCAL", "$$ = ['local', $1]"],			
+//			["LOCAL", "$$ = ['local', $1]"],
+			
+			["# ID", "$$ = ['local', $2]"],//stack			
 			["ID # ID ", "$$ = ['local', $3, ['idf', $1]]"],
-			["( SubClass ) # ID", "$$ = ['local', $5, $2]"],		
-			["# ID", "$$ = ['local', $2]"],
+			["( SubClass ) # ID", "$$ = ['local', $5, $2]"],
+			
+			["## ID", "$$ = ['global', $2]"],//heap
+			["ID ## ID ", "$$ = ['global', $3, ['idf', $1]]"],
+			["( SubClass ) ## ID", "$$ = ['global', $5, $2]"],		
+			
 		],
 		Elem: [
 			["Expr", "$$ = [$1]"],
