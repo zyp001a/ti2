@@ -1,1 +1,1 @@
-`objNew(def.Main, {content: ~=$_0~})`
+`objNew(def.Main, {main: ~=$_0~})`
