@@ -152,9 +152,9 @@ var grammar = {
     ],
 		Id: [
 			["ID", "$$ = ['id', $1]"],
-//			["LOCAL", "$$ = ['local', $1]"],
 			
-			["# ID", "$$ = ['local', $2]"],//stack			
+			["# ID", "$$ = ['local', $2]"],//stack
+			["# NUM", "$$ = ['local', $2]"],//stack						
 			["ID # ID ", "$$ = ['local', $3, ['idf', $1]]"],
 			["( SubClass ) # ID", "$$ = ['local', $5, $2]"],
 			
@@ -205,15 +205,15 @@ var grammar = {
 			["Exprs ,", "$$ = $1"],			//allow additional ,;
 		],		
 		Get: [
-			["Id . ID", "$$ = ['get', $1, ['str', $3]]"],
-			["Get . ID", "$$ = ['get', $1, ['str', $3]]"],
-			["( Expr ) . ID", "$$ = ['get', $2, ['str', $5]]"],
-			["Id . ( Expr )", "$$ = ['get', $1, $4]"],
-			["Get . ( Expr )", "$$ = ['get', $1, $4]"],
-			["( Expr ) . ( Expr )", "$$ = ['get', $2, $6]"],
-			["Id [ Expr ]", "$$ = ['arrget', $1, $3]"],		
-			["Get [ Expr ]", "$$ = ['arrget', $1, $3]"],			
-			["( Expr ) [ Expr ]", "$$ = ['arrget', $2, $5]"],
+			["Id . ID", "$$ = ['objget', $1, ['str', $3]]"],
+			["Get . ID", "$$ = ['objget', $1, ['str', $3]]"],
+			["( Expr ) . ID", "$$ = ['objget', $2, ['str', $5]]"],
+			["Id [ Expr ]", "$$ = ['itemsget', $1, $3]"],		
+			["Get [ Expr ]", "$$ = ['itemsget', $1, $3]"],			
+			["( Expr ) [ Expr ]", "$$ = ['itemsget', $2, $5]"],
+			["Id -> ID", "$$ = ['objget', $1, ['str', $3]]"],
+			["Get -> ID", "$$ = ['objget', $1, ['str', $3]]"],
+			["( Expr ) -> ID", "$$ = ['objget', $2, ['str', $5]]"],
 		],
 		"FUNC": [
 			["& Dic", "$$ = [$2, [[]]]"],
