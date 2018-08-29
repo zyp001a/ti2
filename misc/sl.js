@@ -207,7 +207,9 @@ funcNew(def, "itemsSet", function(p, k, v){
 	return p[k] = v
 }, [["p"], ["k"], ["v"]])
 funcNew(def, "globalSet", function(k, v){
-	if(k == undefined) die("")	
+	if(k == undefined) die("")
+	if(v.__) v.__.name = k;
+	if(v.__) v.__.id = k;
 	return this.x.global[k] = v;
 }, [["k"], ["v"]])
 funcNew(def, "globalGet", function(k){
@@ -899,8 +901,9 @@ async function call(func, argsn, conf, rawflag){
 			return await func.func.val.apply(conf, args)			
   }
 	//is FuncBlock
-	if(func.___.type == "FuncInternal")
-		return func.__.name
+//	if(func.___.type == "FuncInternal"){
+//		return func.__.name
+//	}
 	
 	var x = conf.x;
 	var state = stateNew(func.argdef[0], args);

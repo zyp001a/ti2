@@ -13,10 +13,12 @@ var grammar = {
 			["\\/\\*.*\\*\\/", "return;"],//COMMENT
 			["\\\/\\\/[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
 //			["#[^\\n\\r]+[\\n\\r]*", "return;"],			
-			["@`(\\\\.|[^\\\\`])*`", 
-			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\([`~\\&])/g, '$1'); return 'TPL';"],
+			["\\@`(\\\\.|[^\\\\`])*`", 
+			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\([~\\&])/g, '$1'); return 'TPL';"],
 			["@\'(\\\\.|\\.)\'", "yytext = yytext.substr(2, yyleng-3); return 'CHAR'"],
-			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"|`(\\\\.|[^\\\\`])*`",
+			["`(\\\\.|[^\\\\`])*`",
+			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\`/g, '`'); return 'STR';"], 			
+			["\'(\\\\.|[^\\\\\'])*\'|\"(\\\\.|[^\\\\\"])*\"",
 			 "yytext = yytext.substr(1, yyleng-2).replace(/\\\\u([0-9a-fA-F]{4})/, function(m, n){ return String.fromCharCode(parseInt(n, 16)) }).replace(/\\\\(.)/g, function(m, n){ if(n == 'n') return '\\n';if(n == 'r') return '\\r';if(n == 't') return '\\t'; return n;}); return 'STR';"], 
 //			["\<[a-zA-Z0-9_\\\/\\s]*\>",
 //       "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'PARENTS';"],
@@ -205,15 +207,18 @@ var grammar = {
 			["Exprs ,", "$$ = $1"],			//allow additional ,;
 		],		
 		Get: [
-			["Id . ID", "$$ = ['get', $1, ['str', $3]], 'obj'"],
+			["Id . ID", "$$ = ['get', $1, ['str', $3], 'obj']"],
 			["Get . ID", "$$ = ['get', $1, ['str', $3], 'obj']"],
 			["( Expr ) . ID", "$$ = ['get', $2, ['str', $5], 'obj']"],
 			["Id [ Expr ]", "$$ = ['get', $1, $3, 'items']"],		
 			["Get [ Expr ]", "$$ = ['get', $1, $3, 'items']"],			
 			["( Expr ) [ Expr ]", "$$ = ['get', $2, $5, 'items']"],
-			["Id -> ID", "$$ = ['get', $1, ['str', $3], 'class']"],
-			["Get -> ID", "$$ = ['get', $1, ['str', $3], 'class']"],
-			["( Expr ) -> ID", "$$ = ['get', $2, ['str', $5], 'class']"],
+			["Id -> ID", "$$ = ['get', $1, ['str', $3], 'scope']"],
+			["Get -> ID", "$$ = ['get', $1, ['str', $3], 'scope']"],
+			["( Expr ) -> ID", "$$ = ['get', $2, ['str', $5], 'scope']"],
+			["Id => ID", "$$ = ['get', $1, ['str', $3], 'class']"],
+			["Get => ID", "$$ = ['get', $1, ['str', $3], 'class']"],
+			["( Expr ) => ID", "$$ = ['get', $2, ['str', $5], 'class']"],
 		],
 		"FUNC": [
 			["& Dic", "$$ = [$2, [[]]]"],
