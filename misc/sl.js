@@ -113,6 +113,8 @@ classNew(def, "Block", [def.Struct], {
 		labels: classSub(def.Dic,{element:def.Str})
 	}
 })
+classNew(def, "FuncInternal", [def.Func], {
+})
 classNew(def, "FuncNative", [def.Func], {
 	schema: {
 		func: def.Function,
@@ -308,9 +310,12 @@ funcNew(def, "exec", async function(o, conf){
 	var r = await exec(o, conf);
   return r;
 }, [["o"], ["conf"]])
-funcNew(def, "call", async function(r, args){
-	return await call(r, args, this, 1);
-}, [["r"], ["args"]])
+funcNew(def, "call", async function(r, args, conf){
+	return await call(r, args, conf, 1);
+}, [["r"], ["args"], ["conf"]])
+funcNew(def, "type", async function(o){
+	return type(o)
+}, [["o"]])
 funcNew(def, "and", async function(l, r){
 	return (await exec(l, this)) && (await exec(r, this));
 }, [["l"], ["r"]], 1)
@@ -527,6 +532,11 @@ function objNew(cla, proto){
 	Object.defineProperty(proto, '___', {
 		enumerable: false,
 		configurable: false
+	});
+	proto.__ = {}
+	Object.defineProperty(proto, '__', {
+		enumerable: false,
+		configurable: false
 	});	
 	return proto;
 }
@@ -602,6 +612,7 @@ function routeInit(){
 function classInit(cla, conf){
 	var p = routeInit();
 	var x = p.__;
+	x.isclass = 1;
 	for(var k in conf){
 		x[k] = conf[k];
 	}
@@ -743,7 +754,9 @@ function rawType(e){
 		if(x && !x.enumerable){
 			if(haskey(x.value, "index"))
 				return "Scope";
-			return "Class"
+			if(haskey(x.value, "isclass"))
+				return "Class";
+//			return "Class"
 		}
 		if(y && !y.enumerable)
 			return "Obj"
@@ -886,7 +899,9 @@ async function call(func, argsn, conf, rawflag){
 			return await func.func.val.apply(conf, args)			
   }
 	//is FuncBlock
-
+	if(func.___.type == "FuncInternal")
+		return func.__.name
+	
 	var x = conf.x;
 	var state = stateNew(func.argdef[0], args);
 	x.stack.push(x.state);
@@ -1004,20 +1019,22 @@ async function ast2obj(scope, ast){
 		var args = [];
 		var t = v[1][0];
 		if(v[0][0] == "id" &&
-			 (t == "func" || t == "class" || t == "scope" || t == "tpl")){
+			 (t == "func" || t == "class" || t == "scope" || t == "tpl" || t == "obj")){
 			//predefine not call assign
 			var res;
 			if(t == "func"){
-				var ori = fbNew();
+				var ori = fbNew(); 
 				route(scope, v[0][1], ori);
 				res = await ast2obj(scope, v[1]);
 				ori.block = res.block;
 				ori.argdef = res.argdef;
+				return ori;
 			}else{
 				res = await ast2obj(scope, v[1]);
 				route(scope, v[0][1], res);
+				return res;
 			}
-			return vv;
+//			return vv;
 		}
 
 		var vv = await ast2obj(scope, v[1]);
@@ -1179,12 +1196,18 @@ async function ast2obj(scope, ast){
 			args: objNew(def.Arr, args),
 		});
 		return r;
-	case "subclass":
+	case "cons":
 		var c = await ast2obj(scope, v);
 		var dic = await ast2obj(scope, v2);
 		if(type(dic) == "Dic$elementCallable")
 			die("dynmaic expression not allowed in subclass definition");
 		return classSub(c, dic);
+	case "obj":
+		var c = await ast2obj(scope, v);
+		var dic = await ast2obj(scope, v2);			
+		var r = objNew(c, dic)
+		return r;
+		break;
 	case "class":
 		var arr = await ast2arr(scope, v);
 		var dic = await ast2obj(scope, v2);

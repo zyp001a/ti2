@@ -254,8 +254,13 @@ var grammar = {
 			["SubClass", "$$ = $1"],
 			["ID", "$$ = ['idf', $1]"]
 		],
-		"SubClass": [
-			["ID { Elems }", "$$ = ['subclass', ['idf', $1], ['dic', $3, 'Dic']];"],
+		"Cons": [
+			["ID { Elems }", "$$ = ['cons', ['idf', $1], ['dic', $3, 'Dic']];"],
+		],
+		"Obj": [
+			["@ ID { }", "$$ = ['obj', ['idf', $2], ['dic', [], 'Dic']];"],
+			["@ ID", "$$ = ['obj', ['idf', $2], ['dic', [], 'Dic']];"],
+			["@ ID { Elems }", "$$ = ['obj', ['idf', $2], ['dic', $4, 'Dic']];"],
 		],
 		"CallArgs": [
 			["( )", "$$ = []"],

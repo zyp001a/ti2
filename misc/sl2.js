@@ -88,13 +88,11 @@ function route(pscope, name, p){
 
 function scopeInit(pscope, k, parents){
 	var p = objInit();
-	p.val = {}
-	
+	p.val = {}	
 	var pp = p.scopeParents = {};
   for(var i in parents){
     pp[parents[i].__.id] = parents[i];
   }
-	
 	if(pscope)
 		route(pscope, k, p);
 	else //is root
@@ -562,7 +560,9 @@ function objNew(cons, o, scope, name){
 	if(!cons) die()
 	var obj = objInit();
 //	if(cons.
-	obj.class =
+	obj.class = cons.
+		obj.cons = cons;
+
 	if(typeof proto != "object") die()		
 	if(haskey(cla, "schema")){
 		//TODO iterate cla parent(s)
