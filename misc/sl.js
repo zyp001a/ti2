@@ -161,21 +161,29 @@ funcNew(def, "sp", function(){
 	var self = this;
 	return self.s;
 })
+funcNew(def, "self", function(){
+	var self = this;
+	return self;
+})
 funcNew(def, "val", async function(p){//property get val
 	return p.val;	
 }, [["p"]])
-funcNew(def, "propGet", async function(p, k){//property get
-	return await exec(p[k], this);	
-}, [["p"], ["k"]])
-
 funcNew(def, "oget", function(p, k){//___ get
 	return p.___[k];
 }, [["p"], ["k"]])
 funcNew(def, "rget", function(p, k){//__ get
 	return p.__[k];
 }, [["p"], ["k"]])
-
+funcNew(def, "propGet", async function(p, k){//property get
+	return await exec(p[k], this);	
+}, [["p"], ["k"]])
 funcNew(def, "propSet", function(p, k, v){
+	return p[k] = v;
+}, [["p"], ["k"], ["v"]])
+funcNew(def, "classGet", async function(p, k){//property get
+	return await exec(p[k], this);	
+}, [["p"], ["k"]])
+funcNew(def, "classSet", function(p, k, v){
 	return p[k] = v;
 }, [["p"], ["k"], ["v"]])
 funcNew(def, "scopeSet", function(p, k, v, t){//t is type 
@@ -191,19 +199,19 @@ funcNew(def, "haskey", async function(p, k){
 	return await scopeGet(p, k)  
 }, [["p"], ["k"]])
 funcNew(def, "itemsGet", function(p, k){
-  if(!p.___ && typeof p != "string"){
+/*  if(!p.___ && typeof p != "string"){
 		log(p)
 		log(k)		
 		die("error")
-	}
+	}*/
 	return p[k]
 }, [["p"], ["k"]])
 funcNew(def, "itemsSet", function(p, k, v){
-  if(!p.___ && typeof p != "string"){
+/*  if(!p.___ && typeof p != "string"){
 		log(p)
 		log(k)		
 		die("error")
-	}
+	}*/
 	return p[k] = v
 }, [["p"], ["k"], ["v"]])
 funcNew(def, "globalSet", function(k, v){
@@ -292,6 +300,15 @@ funcNew(def, "isleaf", function(o){
 	if(typeof o != "object") return 0;
 	if(!o.__) return 0;
 	return 1
+}, [["o"]])
+funcNew(def, "isarg", function(o){
+	return o.isarg
+}, [["o"]])
+funcNew(def, "isdef", function(o){
+	return o.isdef
+}, [["o"]])
+funcNew(def, "issizet", function(o){
+	return (parseInt(o.val).toString() == o.val.toString())
 }, [["o"]])
 
 funcNew(def, "fileRead", function(f, c){
@@ -438,6 +455,24 @@ funcNew(execsp, "Ctrl", async function(o){
 		}
 		break;    
 	case "each":
+    var dic = await exec(o.args[2], self);
+//    var x = await exec(o.args[0].args[0], self)
+		//    var k = await exec(o.args[0].args[0], self)
+		var k = o.args[0]
+		var vk = o.args[1]
+		for(var key in dic){
+      self.x.state[k] = raw2obj(key);
+      self.x.state[vk] = raw2obj(dic[key]);
+			var r = await blockExec(o.args[3], self);
+			if(typeof r == "object" && r.ctrl){
+				if(r.ctrl.val == "return")
+					return r;
+				if(r.ctrl.val == "break")
+					break;
+				if(r.ctrl.val == "continue")
+					continue;
+			}			
+		}
 		break;
 	case "goto":
 		break;
@@ -636,7 +671,9 @@ function classNew(pscope, name, cla, conf){
 function varNew(pscope, name, cla){
 	var p = routeInit();
 	route(pscope, name, p);
-	p.type = cla;
+	for(var key in cla){
+		p[key] = cla[key];
+	}
 	return p;
 }
 function scopeInit(parents){
@@ -669,6 +706,10 @@ function scopeNew(pscope, k, parents){//TODO
     return xx;
   }
 	var p = scopeInit();
+	if(pscope && !k){
+		k = pscope.__.index.toString();
+		pscope.__.index ++;
+	}
 	if(pscope)
 		route(pscope, k, p);
 	return p;
@@ -827,6 +868,7 @@ async function exec(obj, conf){
 	var s = conf.s;
 	var e = conf.e;
 	var x = conf.x;
+	if(!obj) die("error")
 	var t = type(obj)
   var ex;
 	execInit(x);
@@ -844,6 +886,7 @@ function stateNew(a0, args){
 	var state = objNew(def.Dic, {});
 	for(var i in args){
 		var d = a0[i];
+		if(!d) die("args error")
 		state[i] = state[d[0]] = args[i];
 	}
 	state.$arglen = args.length;
@@ -881,6 +924,7 @@ async function tplCall(str, args, conf){
 	return r.return;
 }
 async function call(func, argsn, conf, rawflag){
+	if(!func) die("error no func")
 	if(func.str){//is FuncTpl
 		return await tplCall(func.str.val, argsn, conf);
 	}
@@ -904,7 +948,11 @@ async function call(func, argsn, conf, rawflag){
 //	if(func.___.type == "FuncInternal"){
 //		return func.__.name
 //	}
-	
+	if(!func.argdef || !func.argdef[0]){
+		log(func.__)
+		log(func.argdef)		
+		die("func not defined")
+	}
 	var x = conf.x;
 	var state = stateNew(func.argdef[0], args);
 	x.stack.push(x.state);
@@ -1012,6 +1060,9 @@ async function ast2obj(scope, ast){
 	case "call":
 		
 		var func = await ast2obj(scope, v);
+		if(!func){
+			die("error")
+		}
 		//TODO classSub		
 		var args = objNew(def.Arr, await ast2arr(scope, v2))
 		if(v[0] == "objget")
@@ -1031,10 +1082,12 @@ async function ast2obj(scope, ast){
 				res = await ast2obj(scope, v[1]);
 				ori.block = res.block;
 				ori.argdef = res.argdef;
+				ori.isdef = 1;
 				return ori;
 			}else{
 				res = await ast2obj(scope, v[1]);
 				route(scope, v[0][1], res);
+				res.isdef = 1;				
 				return res;
 			}
 //			return vv;
@@ -1049,16 +1102,16 @@ async function ast2obj(scope, ast){
 		}
 
 		if(v[0][0] == "local"){
-			varNew(scope, v[0][1], def.Class);
+			varNew(scope, v[0][1], {type:def.Class, isstate:1});
 			return callNew(def.stateSet, [raw2obj(v[0][1]), vv]);			
 		}
 		if(v[0][0] == "global"){
-			varNew(globalScope, v[0][1], def.Class);			
+			varNew(globalScope, v[0][1], {type:def.Class});			
 			return callNew(def.globalSet, [raw2obj(v[0][1]), vv]);			
 		}
 		if(v[0][0] == "id"){
 			var k = v[0][1];
-			if(haskey(scope, k)){
+			if(haskey(scope, k) && (scope[k].isstate || scope[k].isarg)){
 				return callNew(def.stateSet, [raw2obj(k), vv]);
 			}else if(haskey(globalScope, k)){
 				return callNew(def.globalSet, [raw2obj(k), vv]);
@@ -1084,7 +1137,7 @@ async function ast2obj(scope, ast){
 		
 	case "id":
 		var k = v;
-	  if(haskey(scope, k)){
+		if(haskey(scope, k) && (scope[k].isstate || scope[k].isarg)){			
 			return callNew(def.stateGet, [raw2obj(k)]);
 		}else if(haskey(globalScope, k)){
 			return callNew(def.globalGet, [raw2obj(k)]);
@@ -1100,7 +1153,7 @@ async function ast2obj(scope, ast){
 			t = await ast2obj(scope, v2);
 		else
 			t = def.Class;
-		varNew(scope, v, t);
+		varNew(scope, v, {type: t, isstate:1});
 		return callNew(def.stateGet, [raw2obj(v)]);		
 		
 	case "global":
@@ -1109,7 +1162,7 @@ async function ast2obj(scope, ast){
 			t = await ast2obj(globalScope, v2);
 		else
 			t = def.Class;
-		varNew(globalScope, v, t);
+		varNew(globalScope, v, {type:t});
 		return callNew(def.globalGet, [raw2obj(v)]);
 		
 	case "get":
@@ -1141,7 +1194,9 @@ async function ast2obj(scope, ast){
 		//		nscope.__.indc = scope.__.indc + 1;
 		for(var i in a0){
 			var d = a0[i];
-			nscope[i] = nscope[d[0]] = {type: d[1]};
+			var x = {type: await ast2obj(scope, d[1]), isarg:1};
+			varNew(nscope, i, x)
+			varNew(nscope, d[0], x)			
 		}
 		var b = await ast2obj(nscope, block);
 		return fbNew(b, a)
@@ -1168,7 +1223,7 @@ async function ast2obj(scope, ast){
 				arr.push(y);
 				labels[x[1]] = objNew(def.Num, {val: Number(i)});
 			}
-			return objNew(def.Block, {arr:arr, labels: {}});
+			return objNew(def.Block, {arr:arr, labels: {}, scope: scope});
 		}
 		if(v2 == "Dic"){
 			var dicx = {};
@@ -1191,7 +1246,11 @@ async function ast2obj(scope, ast){
 		}
 	case "ctrl":
 		if(v == "foreach"){
-			varNew(scope, v2[0], def.Class);
+			varNew(scope, v2[0], {type: def.Class, isstate:1});			
+		}		
+		if(v == "each"){
+			varNew(scope, v2[0], {type: def.Str, isstate:1});
+			varNew(scope, v2[1], {type: def.Class, isstate:1});
 		}		
 		var args = await ast2arr(scope, v2);
 		var r = objNew(def.Ctrl, {
