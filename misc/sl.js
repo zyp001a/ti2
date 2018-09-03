@@ -116,21 +116,10 @@ classNew(def, "Block", [def.Struct], {
 classNew(def, "FuncInternal", [def.Func], {
 })
 classNew(def, "FuncNative", [def.Func], {
-	schema: {
-		func: def.Function,
-		argdef: def.Argdef
-	}
 });
 classNew(def, "FuncBlock", [def.Func], {
-	schema: {
-		block: def.Block,
-		argdef: def.Argdef
-	}	
 });
 classNew(def, "FuncTpl", [def.Func], {
-	schema: {
-		str: def.Str
-	}
 });
 
 classNew(def, "Main", [def.Struct], {
@@ -289,10 +278,10 @@ funcNew(def, "uc", function(l){
 funcNew(def, "lc", function(l){
 	return l.toLowerCase();
 }, [["l"]])
-funcNew(def, "len", function(l){
+funcNew(def, "len", function len(l){
 	return l.length;
 }, [["l"]])
-funcNew(def, "strlen", function(l){
+funcNew(def, "strlen", function strlen(l){
 	return l.length;
 }, [["l"]])
 
@@ -518,20 +507,21 @@ function callNew(func, args){
 	});
 }
 //internal function
-function fbNew(block, argdef){
+function fbNew(block, argdef, r){
 	var oo = routeInit();
-	oo.block = block;
-	oo.argdef = argdef;
+	oo.func = block;
+	oo.funcArgts = argdef;
+  oo.funcReturn = r;
 	return objNew(def.FuncBlock, oo)
 }
 function ftNew(str){
 	var oo = routeInit();
-	oo.str = objNew(def.Str, {val: str});
+	oo.func = objNew(def.Str, {val: str});
 	return objNew(def.FuncTpl, oo);
 }
 function funcNew(scope, name, func, argdef, flagraw){
 	var oo = routeInit();
-	oo.argdef = objNew(def.Argdef, argdef);
+	oo.funcArgts = objNew(def.Arr, argdef);
 	oo.func = objNew(def.Func, {val: func});
 	var o = objNew(def.FuncNative, oo);
   if(name)
@@ -868,7 +858,7 @@ async function exec(obj, conf){
 	var s = conf.s;
 	var e = conf.e;
 	var x = conf.x;
-	if(!obj) die("error")
+	if(!obj) die("error: exec not obj")
 	var t = type(obj)
   var ex;
 	execInit(x);
@@ -886,7 +876,7 @@ function stateNew(a0, args){
 	var state = objNew(def.Dic, {});
 	for(var i in args){
 		var d = a0[i];
-		if(!d) die("args error")
+    if(!d) die("args error")
 		state[i] = state[d[0]] = args[i];
 	}
 	state.$arglen = args.length;
@@ -925,8 +915,8 @@ async function tplCall(str, args, conf){
 }
 async function call(func, argsn, conf, rawflag){
 	if(!func) die("error no func")
-	if(func.str){//is FuncTpl
-		return await tplCall(func.str.val, argsn, conf);
+	if(func.___.type == "FuncTpl"){//is FuncTpl
+		return await tplCall(func.func.val, argsn, conf);
 	}
 	//Process args
 	if(!rawflag){
@@ -938,7 +928,7 @@ async function call(func, argsn, conf, rawflag){
 		args = argsn;
 	}
 	
-  if(func.func){//is FuncNative
+  if(func.___.type == "FuncNative"){//is FuncNative
 		if(func.___.rawargs)
 			return await func.func.val.apply(conf, argsn)
 		else
@@ -948,16 +938,15 @@ async function call(func, argsn, conf, rawflag){
 //	if(func.___.type == "FuncInternal"){
 //		return func.__.name
 //	}
-	if(!func.argdef || !func.argdef[0]){
+	if(!func.funcArgts){
 		log(func.__)
-		log(func.argdef)		
 		die("func not defined")
 	}
 	var x = conf.x;
-	var state = stateNew(func.argdef[0], args);
+	var state = stateNew(func.funcArgts, args);
 	x.stack.push(x.state);
 	x.state = state;
-	var r = await blockExec(func.block, conf);
+	var r = await blockExec(func.func, conf);
 	if(rawType(r) == "Obj" && r.ctrl && r.ctrl.val == "return")
     r = r.return;
 	x.state = x.stack.pop();
@@ -1080,8 +1069,9 @@ async function ast2obj(scope, ast){
 				var ori = fbNew(); 
 				route(scope, v[0][1], ori);
 				res = await ast2obj(scope, v[1]);
-				ori.block = res.block;
-				ori.argdef = res.argdef;
+				ori.func = res.func;
+				ori.funcArgts = res.funcArgts;
+				ori.funcReturn = res.funcReturn;        
 				ori.isdef = 1;
 				return ori;
 			}else{
@@ -1179,16 +1169,17 @@ async function ast2obj(scope, ast){
 	case "func":
 		var block = v[0];
 		var argdef = v[1];
-		var a = objNew(def.Argdef, [[]]);
+		var a = objNew(def.Arr, []);
 		var a0 = argdef[0];
 		for(var i in a0){
 			var d = a0[i];
-			a[0][i] = [d[0]];
+			a[i] = [d[0]];
 			if(d[1])
-				a[0][i][1] = await ast2obj(scope, d[1])
+				a[i][1] = await ast2obj(scope, d[1])
 		}
+    var r;
 		if(argdef[1])
-			a[1] = await ast2obj(scope, argdef[1]);
+			r = await ast2obj(scope, argdef[1]);
 		block[2] = "Block";
 		var nscope = scopeNew(scope);
 		//		nscope.__.indc = scope.__.indc + 1;
@@ -1199,7 +1190,7 @@ async function ast2obj(scope, ast){
 			varNew(nscope, d[0], x)			
 		}
 		var b = await ast2obj(nscope, block);
-		return fbNew(b, a)
+		return fbNew(b, a, r)
 	case "tpl":		
 		return ftNew(v);	
 	case "dic":
