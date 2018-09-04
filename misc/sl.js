@@ -54,14 +54,17 @@ var prefix = process.env.HOME+"/soul/db0";
 var root = scopeNew();
 var execsp = scopeNew(root, "exec");
 var def = scopeNew(root, "def");
+
 var globalScope = scopeNew(root, "global");
 classNew(def, "Class")
-
 classNew(def, "ClassMeta")
 classNew(def, "Scope")
 
 classNew(def, "Struct")
 classNew(def, "Raw")
+classNew(def, "Repr")
+classNew(def, "ReprFunc", [def.Repr])
+classNew(def, "Argt")
 classNew(def, "Callable", [def.Raw])
 classNew(def, "Struct", [def.Raw])
 
@@ -163,6 +166,12 @@ funcNew(def, "oget", function(p, k){//___ get
 funcNew(def, "rget", function(p, k){//__ get
 	return p.__[k];
 }, [["p"], ["k"]])
+
+funcNew(def, "objGet", async function(p, k){//property get
+	return await exec(p[k], this);	
+}, [["p"], ["k"]])
+
+
 funcNew(def, "propGet", async function(p, k){//property get
 	return await exec(p[k], this);	
 }, [["p"], ["k"]])
@@ -510,7 +519,10 @@ function callNew(func, args){
 function fbNew(block, argdef, r){
 	var oo = routeInit();
 	oo.func = block;
-	oo.funcArgts = argdef;
+	oo.funcArgts = objNew(def.Arr, [])
+  for(var i in argdef){
+    oo.funcArgts[i] = objNew(def.Argt, argdef[i]);
+  }
   oo.funcReturn = r;
 	return objNew(def.FuncBlock, oo)
 }
@@ -521,7 +533,10 @@ function ftNew(str){
 }
 function funcNew(scope, name, func, argdef, flagraw){
 	var oo = routeInit();
-	oo.funcArgts = objNew(def.Arr, argdef);
+	oo.funcArgts = objNew(def.Arr, [])
+  for(var i in argdef){
+    oo.funcArgts[i] = objNew(def.Argt, argdef[i]);
+  }  
 	oo.func = objNew(def.Func, {val: func});
 	var o = objNew(def.FuncNative, oo);
   if(name)
@@ -645,7 +660,10 @@ function classInit(cla, conf){
 	}
 	x.parents = {};
   if(!cla){
-		if(!def.Class) def.Class = p;
+		if(!def.Class){
+      def.Class = p;
+      p.__.id = "Class"
+    }
 		cla = [def.Class];
 	}
   for(var i in cla){
@@ -826,16 +844,22 @@ async function istype(obj, type){
 }
 function type(obj){
   if(obj.___) return obj.___.type;
+  if(!obj.__){
+    log(obj);
+    die("wrong obj")
+  }
 	if(obj.__.index) return "Scope";
 	return "ClassMeta";
 }
 async function execGet(sp, esp, t, cache){
+  if(t == undefined) die("wrong t")
   if(!cache) cache = {};
 	var r = await scopeGet(esp, t);
 	if(r) return r.value;
 	var tt = await scopeGet(sp, t)
   tt = tt.value;
 	for(var k in tt.__.parents){
+    if(k == "undefined") die("parents undefined")
     if(cache[k]) return;
     cache[k] = 1;
 		r = await execGet(sp, esp, k, cache);
@@ -1257,9 +1281,15 @@ async function ast2obj(scope, ast){
 		return classSub(c, dic);
 	case "obj":
 		var c = await ast2obj(scope, v);
-		var dic = await ast2obj(scope, v2);			
-		var r = objNew(c, dic)
-		return r;
+    if(v2[0] == "func"){
+		  var f = await ast2obj(scope, v2);
+      f.___.type = c.__.id;
+      return f;
+    }else{
+		  var dic = await ast2obj(scope, v2);
+		  var r = objNew(c, dic)
+		  return r;
+    }
 		break;
 	case "class":
 		var arr = await ast2arr(scope, v);
