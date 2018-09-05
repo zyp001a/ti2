@@ -10,8 +10,8 @@ var grammar = {
       "br": "[\\n\\r;,]+"			
     },
     "rules": [
-			["\\/\\*.*\\*\\/", "return;"],//COMMENT
-			["\\\/\\\/[^\\n\\r]+[\\n\\r]*", "return;"],//COMMENT
+			["\\/\\*[^\\*]*\\*\\/", "return;"],//COMMENT
+			["\\\/\\\/[^\\n\\r]+", "return;"],//COMMENT
 //			["#[^\\n\\r]+[\\n\\r]*", "return;"],			
 			["\\@`(\\\\.|[^\\\\`])*`", 
 			 "yytext = yytext.substr(2, yyleng-3).replace(/\\\\([~\\&])/g, '$1'); return 'TPL';"],
@@ -130,6 +130,7 @@ var grammar = {
 			"Dic",
 			"Obj",
 			"Class",
+			"Cons",			
 //
 			"Id",
 			"Call",
@@ -176,8 +177,8 @@ var grammar = {
 			["If", "$$ = ['ctrl', 'if', $1]"],
 			["WHILE Expr Dic", "$$ = ['ctrl', 'while', [$2, $3]]"],
 			["FOR Expr , Expr , Expr Dic", "$$ = ['ctrl', 'for', [$2, $4, $6, $7]]"],
-			["FOREACH ID Expr Dic", "$$ = ['ctrl', 'foreach', [$2, $3, $4]]"],
-			["EACH ID ID Expr Dic", "$$ = ['ctrl', 'each', [$2, $3, $4, $5]]"],
+			["FOREACH ID Expr Dic", "$$ = ['ctrl', 'foreach', [['str',$2], $3, $4]]"],
+			["EACH ID ID Expr Dic", "$$ = ['ctrl', 'each', [['str', $2], ['str', $3], $4, $5]]"],
 			["RETURN Expr", "$$ = ['ctrl', 'return', [$2]]"],
 			["BREAK", "$$ = ['ctrl', 'break']"],
 			["CONTINUE", "$$ = ['ctrl', 'continue']"],
@@ -257,7 +258,8 @@ var grammar = {
 			["ID", "$$ = ['idf', $1]"]
 		],
 		"Cons": [
-			["ID { Elems }", "$$ = ['cons', ['idf', $1], ['dic', $3, 'Dic']];"],
+			["% ID { Elems }", "$$ = ['cons', ['idf', $2], ['dic', $4, 'Dic']];"],
+			["% ID { }", "$$ = ['cons', ['idf', $2], ['dic', [], 'Dic']];"],			
 		],
 		"Obj": [
 			["@ ID { }", "$$ = ['obj', ['idf', $2], ['dic', [], 'Dic']];"],

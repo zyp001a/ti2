@@ -62,8 +62,6 @@ classNew(def, "Scope")
 
 classNew(def, "Struct")
 classNew(def, "Raw")
-classNew(def, "Repr")
-classNew(def, "ReprFunc", [def.Repr])
 classNew(def, "Argt")
 classNew(def, "Callable", [def.Raw])
 classNew(def, "Struct", [def.Raw])
@@ -173,6 +171,7 @@ funcNew(def, "objGet", async function(p, k){//property get
 
 
 funcNew(def, "propGet", async function(p, k){//property get
+	if(p[k] == undefined) return undefined;
 	return await exec(p[k], this);	
 }, [["p"], ["k"]])
 funcNew(def, "propSet", function(p, k, v){
@@ -292,6 +291,8 @@ funcNew(def, "len", function len(l){
 }, [["l"]])
 funcNew(def, "strlen", function strlen(l){
 	return l.length;
+}, [["l"]])
+funcNew(def, "repr", function repr(l){
 }, [["l"]])
 
 funcNew(def, "isleaf", function(o){
@@ -438,7 +439,7 @@ funcNew(execsp, "Ctrl", async function(o){
     var arr = await exec(o.args[1], self);
 //    var x = await exec(o.args[0].args[0], self)
 		//    var k = await exec(o.args[0].args[0], self)
-		var k = o.args[0]
+		var k = o.args[0].val
 		for(var i in arr){
       self.x.state[k] = arr[i];
 			var r = await blockExec(o.args[2], self);
@@ -456,8 +457,8 @@ funcNew(execsp, "Ctrl", async function(o){
     var dic = await exec(o.args[2], self);
 //    var x = await exec(o.args[0].args[0], self)
 		//    var k = await exec(o.args[0].args[0], self)
-		var k = o.args[0]
-		var vk = o.args[1]
+		var k = o.args[0].val
+		var vk = o.args[1].val
 		for(var key in dic){
       self.x.state[k] = raw2obj(key);
       self.x.state[vk] = raw2obj(dic[key]);
@@ -588,7 +589,7 @@ function extname(conf){
 		r+=k;
 		var v = conf[k];
 		switch(type(v)){
-		case "ClassMeta":
+		case "Class":
 			r+=v.__.id.replace("_", "");
 			break;
 		case "Num":
@@ -617,6 +618,9 @@ function classSub(c, conf){
 	if(c.__.parent[name])
 		return c.__.parent[name];
   return classNew(c.__.parent, name, [c], conf);
+}
+function cons(c, conf){
+  return classInit([c], conf);
 }
 function route(pscope, name, p){
 	if(!p) die("error");
@@ -848,8 +852,8 @@ function type(obj){
     log(obj);
     die("wrong obj")
   }
-	if(obj.__.index) return "Scope";
-	return "ClassMeta";
+	if(obj.__.isclass) return "Class";
+	return "Scope";
 }
 async function execGet(sp, esp, t, cache){
   if(t == undefined) die("wrong t")
@@ -1086,7 +1090,8 @@ async function ast2obj(scope, ast){
 		var args = [];
 		var t = v[1][0];
 		if(v[0][0] == "id" &&
-			 (t == "func" || t == "class" || t == "scope" || t == "tpl" || t == "obj")){
+			 (t == "func" || t == "class" || t == "scope"
+				|| t == "tpl" || t == "obj" || t == "cons")){
 			//predefine not call assign
 			var res;
 			if(t == "func"){
@@ -1229,7 +1234,7 @@ async function ast2obj(scope, ast){
 			if(kall) v2 = "Dic";
 			else v2 = "Block";
 		}
-		if(v2 == "Block"){
+		if(v2 == "Block" || v2 == "Blockx"){
 			var arr = objNew(def.Arr, []);
 			var labels = {};
 			for(var i in v){
@@ -1237,6 +1242,9 @@ async function ast2obj(scope, ast){
 				var y = await ast2obj(scope, x[0]);
 				arr.push(y);
 				labels[x[1]] = objNew(def.Num, {val: Number(i)});
+			}
+			if(v2 == "Blockx"){
+				return objNew(def.Block, {arr:arr, labels: {}, scope: scope, novar: objNew(def.Num, {val:1})});
 			}
 			return objNew(def.Block, {arr:arr, labels: {}, scope: scope});
 		}
@@ -1261,24 +1269,28 @@ async function ast2obj(scope, ast){
 		}
 	case "ctrl":
 		if(v == "foreach"){
-			varNew(scope, v2[0], {type: def.Class, isstate:1});			
+			varNew(scope, v2[0][1], {type: def.Class, isarg:1});
+			v2[2][2] = "Blockx"
 		}		
 		if(v == "each"){
-			varNew(scope, v2[0], {type: def.Str, isstate:1});
-			varNew(scope, v2[1], {type: def.Class, isstate:1});
-		}		
+			varNew(scope, v2[0][1], {type: def.Str, isarg:1});
+			varNew(scope, v2[1][1], {type: def.Class, isarg:1});
+			v2[3][2] = "Blockx"			
+		}
+		if(v == "if"){
+			for(var i=1; i<v2.length; i+=2){
+				v2[i][2] = "Blockx"
+			}
+			if(v2.length %2 == 1){
+				v2[v2.length-1][2] = "Blockx"
+			}
+		}
 		var args = await ast2arr(scope, v2);
 		var r = objNew(def.Ctrl, {
 			ctrl: objNew(def.Str, {val: v}),
 			args: objNew(def.Arr, args),
 		});
 		return r;
-	case "cons":
-		var c = await ast2obj(scope, v);
-		var dic = await ast2obj(scope, v2);
-		if(type(dic) == "Dic$elementCallable")
-			die("dynmaic expression not allowed in subclass definition");
-		return classSub(c, dic);
 	case "obj":
 		var c = await ast2obj(scope, v);
     if(v2[0] == "func"){
@@ -1294,9 +1306,15 @@ async function ast2obj(scope, ast){
 	case "class":
 		var arr = await ast2arr(scope, v);
 		var dic = await ast2obj(scope, v2);
-		if(type(dic) == "Dic$elementCallable")
-			die("dynmaic expression not allowed in class definition");
+//		if(type(dic) == "Dic$elementCallable")
+//			die("dynmaic expression not allowed in class definition");
 		return classInit(arr, dic);
+	case "cons":
+		var c = await ast2obj(scope, v);
+		var dic = await ast2obj(scope, v2);
+//		if(type(dic) == "Dic$elementCallable")
+		//			die("dynmaic expression not allowed in subclass definition");
+		return cons(c, dic);		
 	case "scope":
 		var arr = await ast2arr(scope, v);
 		return scopeInit(arr);
