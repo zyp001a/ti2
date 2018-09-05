@@ -180,6 +180,7 @@ var grammar = {
 			["FOREACH ID Expr Dic", "$$ = ['ctrl', 'foreach', [['str',$2], $3, $4]]"],
 			["EACH ID ID Expr Dic", "$$ = ['ctrl', 'each', [['str', $2], ['str', $3], $4, $5]]"],
 			["RETURN Expr", "$$ = ['ctrl', 'return', [$2]]"],
+			["RETURN", "$$ = ['ctrl', 'return', []]"],			
 			["BREAK", "$$ = ['ctrl', 'break']"],
 			["CONTINUE", "$$ = ['ctrl', 'continue']"],
 		],
@@ -221,6 +222,7 @@ var grammar = {
 		"FUNC": [
 			["& Dic", "$$ = [$2, [[]]]"],
 			["& Args Dic", "$$ = [$3, $2]"],
+			["& Args", "$$ = [, $2]"],			
 		],
 		"Args": [
 			["( )", "$$= [[]]"],

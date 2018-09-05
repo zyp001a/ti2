@@ -341,6 +341,12 @@ funcNew(def, "or", async function(l, r){
 	return (await exec(l, this)) || (await exec(r, this));
 }, [["l"], ["r"]], 1)
 
+funcNew(def, "suid", async function(){
+	var r = this.s.__.index.toString()
+	this.s.__.index ++;	
+	return r
+})
+
 
 var execarg = [["o"]];
 funcNew(execsp, "Call", async function(o){
@@ -893,7 +899,7 @@ async function exec(obj, conf){
   if(!x[t]){
 		ex = await execGet(s, e, t);
 		if(!ex)
-			die(t+" not exec defined");
+			die(t + " not exec defined");
     x[t] = ex
   }else{
 		ex = x[t];
@@ -1209,6 +1215,7 @@ async function ast2obj(scope, ast){
     var r;
 		if(argdef[1])
 			r = await ast2obj(scope, argdef[1]);
+		if(!block) return fbNew(undefined, a, r)
 		block[2] = "Block";
 		var nscope = scopeNew(scope);
 		//		nscope.__.indc = scope.__.indc + 1;
