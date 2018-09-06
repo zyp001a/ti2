@@ -158,6 +158,8 @@ funcNew(def, "self", function(){
 	var self = this;
 	return self;
 })
+funcNew(def, "objNew", function(c, v){
+}, [["c"], ["v"]])
 funcNew(def, "die", function(o){
 	die(o)
 })
