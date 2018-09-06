@@ -136,6 +136,9 @@ funcNew(def, "push", function(arr, e){
 	arr.push(e);
 	return e;
 }, [["arr"], ["e"]])
+funcNew(def, "str", function(x){
+	return x.toString();
+}, [["arr"]])
 funcNew(def, "join", function(arr, str){
 	return arr.join(str)
 }, [["arr"],["str"]])
@@ -154,6 +157,9 @@ funcNew(def, "sp", function(){
 funcNew(def, "self", function(){
 	var self = this;
 	return self;
+})
+funcNew(def, "die", function(o){
+	die(o)
 })
 funcNew(def, "val", async function(p){//property get val
 	return p.val;	
@@ -192,6 +198,15 @@ funcNew(def, "scopeGet", async function(p, k){
 	if(r)
 		return r.value;
 }, [["p"], ["k"]])
+funcNew(def, "innateGet",  async function(p, k){
+	return p.__[k]
+}, [["p"], ["k"]])
+funcNew(def, "innateSet",  async function(p, k, v){
+	return p.__[k]
+}, [["p"], ["k"], ["v"]])
+funcNew(def, "scopeGetLocal", async function(p, k){
+	return haskey(p, k)
+}, [["p"], ["k"]])
 funcNew(def, "haskey", async function(p, k){
 	return await scopeGet(p, k)  
 }, [["p"], ["k"]])
@@ -229,9 +244,6 @@ funcNew(def, "stateGet", function(k){
 	if(k == undefined) die("stateGet")
 	return this.x.state[k];
 }, [["k"]])
-funcNew(def, "concat", function(p, k, v){
-	return p[k] += v;
-}, [["p"], ["k"], ["v"]])
 funcNew(def, "splus", function(l, r){//string add
 	return l + r;
 }, [["l"], ["r"]])
@@ -345,6 +357,8 @@ funcNew(def, "suid", async function(){
 	var r = this.s.__.index.toString()
 	this.s.__.index ++;	
 	return r
+})
+funcNew(def, "callNative", async function(func, args){
 })
 
 
@@ -748,7 +762,6 @@ async function scopeGetSub(scope, key, cache){
 	}
 	let str = await dbGet(scope, key);
 	if(str){
-		//TODO scope get sub
 		var m = key.match(/^(\S+)_([^_]+)$/);
 		var nscope;
 		if(m){
@@ -757,7 +770,10 @@ async function scopeGetSub(scope, key, cache){
 		}else{
 			nscope = scope;
 		}
-		str = key + " = " + str		
+		str = key + " = " + str
+		if(key == "0"){
+			return haskey(nscope, "0");
+		}
 		var rtn = await progl2obj(nscope, str);
 		return haskey(nscope, key);
 	}
@@ -1121,9 +1137,10 @@ async function ast2obj(scope, ast){
 		var vv = await ast2obj(scope, v[1]);
 		if(v[2]){
 			var getv = await ast2obj(scope, v[0]);								
-			if(v[2] == "splus")
-				return callNew(def.concat, [getv, vv]);
-			vv = callNew(def[v[2]], [getv, vv]);				
+//			if(v[2] == "splus"){
+//				return callNew(def.concat, [getv, vv]);
+//			}
+			vv = callNew(def[v[2]], [getv, vv]);
 		}
 
 		if(v[0][0] == "local"){
@@ -1154,7 +1171,8 @@ async function ast2obj(scope, ast){
 			var v3 = v[0][3]
 			return callNew(def[v3+"Set"], [a0, a1, vv]);			
 		}
-		die(v[0][0] + " not defined for set")
+		log(ast)
+		die(" not defined for assign op")
 	case "idf":
 		var r =	await scopeGet(scope, v);
 		if(!r) die(v + " is not defined, "+dbPath(scope));
