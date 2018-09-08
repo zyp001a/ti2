@@ -139,6 +139,12 @@ funcNew(def, "push", function(arr, e){
 funcNew(def, "str", function(x){
 	return x.toString();
 }, [["arr"]])
+funcNew(def, "num", function(x){
+	return parseFloat(x)
+}, [["arr"]])
+funcNew(def, "null", function(x){
+	return null;
+}, [["arr"]])
 funcNew(def, "join", function(arr, str){
 	return arr.join(str)
 }, [["arr"],["str"]])
@@ -176,6 +182,9 @@ funcNew(def, "rget", function(p, k){//__ get
 funcNew(def, "objGet", async function(p, k){//property get
 	return await exec(p[k], this);	
 }, [["p"], ["k"]])
+funcNew(def, "objSet", async function(p, k, v){//property get
+	return p[k] = raw2obj(v)
+}, [["p"], ["k"], ["v"]])
 
 
 funcNew(def, "propGet", async function(p, k){//property get
@@ -790,6 +799,7 @@ async function scopeGetSub(scope, key, cache){
 	}
 }
 async function scopeGet(scope, key){
+  if(key == undefined) die("scopeGet undefined key")
   var cache = {};
 	var r = await scopeGetSub(scope, key, cache);
 	if(r){
@@ -963,6 +973,8 @@ async function tplCall(str, args, conf){
 	}
 	nconf.x.state.$arglen = args.length;
 	var r = await blockExec(obj, nconf);
+//  log(obj.arr[obj.arr.length -1].args[0])
+//  log(r)  
 	return r.return;
 }
 async function call(func, argsn, conf, rawflag){
@@ -1108,6 +1120,10 @@ async function ast2obj(scope, ast){
 		var args = objNew(def.Arr, await ast2arr(scope, v2))
 		if(v[0] == "objget")
 			args.unshift(func.args[0]);
+    if(!func){
+      log(ast)
+      die("func not defined")
+    }
 		return callNew(func, args);
 		
 	case "assign":
@@ -1122,6 +1138,9 @@ async function ast2obj(scope, ast){
 				var ori = fbNew(); 
 				route(scope, v[0][1], ori);
 				res = await ast2obj(scope, v[1]);
+        if(!res.func){
+          die("lib func not defined")
+        }
 				ori.func = res.func;
 				ori.funcArgts = res.funcArgts;
 				ori.funcReturn = res.funcReturn;        
@@ -1155,6 +1174,7 @@ async function ast2obj(scope, ast){
 		}
 		if(v[0][0] == "id"){
 			var k = v[0][1];
+      if(!k) die("k not defined")
 			if(haskey(scope, k) && (scope[k].isstate || scope[k].isarg)){
 				return callNew(def.stateSet, [raw2obj(k), vv]);
 			}else if(haskey(globalScope, k)){
