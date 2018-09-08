@@ -1138,9 +1138,10 @@ async function ast2obj(scope, ast){
 				var ori = fbNew(); 
 				route(scope, v[0][1], ori);
 				res = await ast2obj(scope, v[1]);
-        if(!res.func){
-          die("lib func not defined")
-        }
+//        if(!res.func){
+//          log(v)
+//          die("lib func not defined")
+//        }
 				ori.func = res.func;
 				ori.funcArgts = res.funcArgts;
 				ori.funcReturn = res.funcReturn;        
