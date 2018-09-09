@@ -333,8 +333,11 @@ funcNew(def, "issizet", function(o){
 	return (parseInt(o.val).toString() == o.val.toString())
 }, [["o"]])
 
-funcNew(def, "fileRead", function(f, c){
+funcNew(def, "fileRead", function(f){
 	return fs.readFileSync(f).toString();	
+})
+funcNew(def, "fileExists", function(f){
+	return fs.existsSync(f)
 })
 funcNew(def, "fileWrite", function(f, c){
 	return fs.writeFileSync(f, c);
