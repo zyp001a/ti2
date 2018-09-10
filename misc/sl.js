@@ -136,6 +136,9 @@ funcNew(def, "push", function(arr, e){
 	arr.push(e);
 	return e;
 }, [["arr"], ["e"]])
+funcNew(def, "pop", function(arr){
+	return arr.pop();
+}, [["arr"]])
 funcNew(def, "str", function(x){
 	return x.toString();
 }, [["arr"]])
@@ -189,7 +192,12 @@ funcNew(def, "objSet", async function(p, k, v){//property get
 
 funcNew(def, "propGet", async function(p, k){//property get
 	if(p[k] == undefined) return undefined;
-	return await exec(p[k], this);	
+  var r = await exec(p[k], this);
+  if(k == "func" && !r){
+    log(p[k])
+    die("func not defined")
+  }  
+	return r;	
 }, [["p"], ["k"]])
 funcNew(def, "propSet", function(p, k, v){
 	return p[k] = v;
@@ -886,7 +894,7 @@ async function istype(obj, type){
 function type(obj){
   if(obj.___) return obj.___.type;
   if(!obj.__){
-    log(obj);
+    log(obj.toString());
     die("wrong obj")
   }
 	if(obj.__.isclass) return "Class";
