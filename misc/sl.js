@@ -368,6 +368,13 @@ funcNew(def, "call", async function(r, args, conf){
 funcNew(def, "type", async function(o){
 	return type(o)
 }, [["o"]])
+funcNew(def, "isdic", async function(o){
+  if(o.___.type == "Dic")
+    return 1;
+  if(o.___.type == "Dic$elementCallable")
+    return 1;
+  return 0
+}, [["o"]])
 funcNew(def, "and", async function(l, r){
 	return (await exec(l, this)) && (await exec(r, this));
 }, [["l"], ["r"]], 1)
