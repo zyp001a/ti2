@@ -169,6 +169,8 @@ funcNew(def, "self", function(){
 })
 funcNew(def, "objNew", function(c, v){
 }, [["c"], ["v"]])
+funcNew(def, "replaceAll", function(c, v){
+}, [["c"], ["v"]])
 funcNew(def, "die", function(o){
 	die(o)
 })
