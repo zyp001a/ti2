@@ -373,6 +373,9 @@ funcNew(def, "call", async function(r, args, conf){
 funcNew(def, "type", async function(o){
 	return type(o)
 }, [["o"]])
+funcNew(def, "rawType", async function(o){
+	return rawType(o)
+}, [["o"]])
 funcNew(def, "isdic", async function(o){
   if(o.___.type == "Dic")
     return 1;
