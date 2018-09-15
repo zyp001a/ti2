@@ -271,6 +271,9 @@ funcNew(def, "splus", function(l, r){//string add
 funcNew(def, "plus", function(l, r){
 	return l + r;
 }, [["l"], ["r"]])
+funcNew(def, "mod", function(l, r){
+	return l % r;
+}, [["l"], ["r"]])
 funcNew(def, "minus", function(l, r){
 	return l - r;
 }, [["l"], ["r"]])
@@ -1345,6 +1348,12 @@ async function ast2obj(scope, ast){
 			varNew(scope, v2[1][1], {type: def.Class, isarg:1});
 			v2[3][2] = "Blockx"			
 		}
+    if(v == "for"){
+      v2[3][2] = "Blockx"
+    }
+    if(v == "while"){
+      v2[1][2] = "Blockx"
+    }
 		if(v == "if"){
 			for(var i=1; i<v2.length; i+=2){
 				v2[i][2] = "Blockx"
