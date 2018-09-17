@@ -50,6 +50,7 @@ function getStackTrace(){
   Error.captureStackTrace(obj, getStackTrace);
   return obj.stack.toString().replace("[object Object]\n","");
 }
+var path = require("path")
 var prefix = process.env.HOME+"/soul/db0";
 var root = scopeNew();
 var execsp = scopeNew(root, "exec");
@@ -132,6 +133,9 @@ classNew(def, "Main", [def.Struct], {
 funcNew(def, "log", function(s){
 	console.log(s);
 }, [["s"]])
+funcNew(def, "match", function(s, r){
+  return !!s.match(new RegExp(r))
+}, [["s"], ["r"]])
 funcNew(def, "push", function(arr, e){
 	arr.push(e);
 	return e;
@@ -349,6 +353,9 @@ funcNew(def, "issizet", function(o){
 funcNew(def, "fileRead", function(f){
 	return fs.readFileSync(f).toString();	
 })
+funcNew(def, "pathResolve", function(f){
+	return path.resolve(f)
+}, [["f"]])
 funcNew(def, "fileExists", function(f){
 	return fs.existsSync(f)
 })
