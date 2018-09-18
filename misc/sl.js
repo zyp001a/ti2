@@ -70,6 +70,9 @@ classNew(def, "Struct", [def.Raw])
 classNew(def, "Undf", [def.Raw], {
 	default: {val: undefined}
 })
+classNew(def, "Null", [def.Raw], {
+	default: {val: null}
+})
 classNew(def, "Num", [def.Raw], {
 	default: {val: 0}
 })
@@ -557,6 +560,7 @@ funcNew(execsp, "Ctrl", async function(o){
 }, [["o"]])
 
 var undf = objNew(def.Undf, {val: undefined})
+var nul = objNew(def.Null, {val: null})
 //parser function
 function valCopy(item){
   let result = undefined;
@@ -671,6 +675,8 @@ function extname(conf){
 			r+=extname(v)
 			break;
 		case "Undf":
+			break;
+		case "Null":
 			break;
 		case "Obj":
 			log(v)
@@ -876,6 +882,7 @@ function rawType(e){
   case "string":
     return "Str";
   case "object":
+		if(!e) return "Null"
 		var x = Object.getOwnPropertyDescriptor(e, '__');//route
 		var y = Object.getOwnPropertyDescriptor(e, '___');//class
 		if(x && !x.enumerable){
@@ -1088,6 +1095,8 @@ function raw2obj(r){
 		return objNew(def.Str, {val: r});
 	case "Undf":
 		return undf;
+	case "Null":
+		return nul;
 	default:
 		return r;
 	}
@@ -1107,6 +1116,8 @@ async function ast2obj(scope, ast){
   switch(t){
 	case "undf":
 		return undf;
+	case "null":
+		return nul;
 	case "num":
 		var p = {};
 		var c = 1;

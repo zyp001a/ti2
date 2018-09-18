@@ -23,7 +23,8 @@ var grammar = {
 //			["\<[a-zA-Z0-9_\\\/\\s]*\>",
 //       "yytext = yytext.replace(/^\<\\s*/, '').replace(/\\s*\>$/, ''); return 'PARENTS';"],
       ["\\\\[\\r\\n;]+", "return"],//allow \ at end of line
-			["\\b\\_\\b", "return 'UNDF'"],
+			["\\b\\_\\b", "return 'NULL'"],
+			["\\b\\__\\b", "return 'UNDF'"],			
 			["\\$?[a-zA-Z_][a-zA-Z0-9_]*\\$?", "return 'ID'"],
 //			["\\#[0-9]+", "yytext = yytext.substr(1);return 'LOCAL'"],			
 //TODO bignumber
@@ -120,6 +121,7 @@ var grammar = {
 		],
 		Expr: [
 			"Undf",
+			"Null",			
 			"Char",
 			"Num",
 			"Str",
@@ -140,6 +142,7 @@ var grammar = {
 			["( Expr )", "$$ = $2"]			
 		],		
 		Undf: "$$ = ['undf', undefined]",
+		Null: "$$ = ['null', null]",		
 		Char: "$$ = ['char', $1]",
 		Num: "$$ = ['num', $1]",
 		Str: "$$ = ['str', $1]",
@@ -215,9 +218,9 @@ var grammar = {
 //			["Id [ Expr ]", "$$ = ['get', $1, $3, 'items']"],		
 //			["Get [ Expr ]", "$$ = ['get', $1, $3, 'items']"],			
 			["Expr [ Expr ]", "$$ = ['get', $1, $3, 'items']"],
-			["Id -> ID", "$$ = ['get', $1, ['str', $3], 'class']"],
-			["Get -> ID", "$$ = ['get', $1, ['str', $3], 'class']"],
-			["( Expr ) -> ID", "$$ = ['get', $2, ['str', $5], 'class']"],
+			["Id -> ID", "$$ = ['get', $1, ['str', $3], 'innate']"],
+			["Get -> ID", "$$ = ['get', $1, ['str', $3], 'innate']"],
+			["( Expr ) -> ID", "$$ = ['get', $2, ['str', $5], 'innate']"],
 		],
 		"FUNC": [
 			["& Dic", "$$ = [$2, [[]]]"],
