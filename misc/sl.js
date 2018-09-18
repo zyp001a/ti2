@@ -156,6 +156,8 @@ funcNew(def, "join", function(arr, str){
 	return arr.join(str)
 }, [["arr"],["str"]])
 
+funcNew(def, "ucfirst", function(){
+})
 funcNew(def, "root", function(){
   return root;
 })
@@ -180,6 +182,9 @@ funcNew(def, "die", function(o){
 })
 funcNew(def, "val", async function(p){//property get val
 	return p.val;	
+}, [["p"]])
+funcNew(def, "escape", async function(p){//property get val
+	return p.replace(/\n/g, "\\n").replace(/\t/g, "\\t").replace(/\r/g, "\\r");	
 }, [["p"]])
 funcNew(def, "oget", function(p, k){//___ get
 	return p.___[k];
