@@ -195,7 +195,10 @@ funcNew(def, "oget", function(p, k){//___ get
 funcNew(def, "rget", function(p, k){//__ get
 	return p.__[k];
 }, [["p"], ["k"]])
-
+funcNew(def, "ccGet", function(p, k){	
+}, [["p"], ["k"]])
+funcNew(def, "ccSet", function(p, k){	
+}, [["p"], ["k"]])
 funcNew(def, "objGet", async function(p, k){//property get
 	return await exec(p[k], this);	
 }, [["p"], ["k"]])

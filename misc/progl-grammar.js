@@ -212,15 +212,16 @@ var grammar = {
 			["Exprs ,", "$$ = $1"],			//allow additional ,;
 		],		
 		Get: [
+			["Expr [ Expr ]", "$$ = ['get', $1, $3, 'items']"],			
 			["Id . ID", "$$ = ['get', $1, ['str', $3], 'obj']"],
 			["Get . ID", "$$ = ['get', $1, ['str', $3], 'obj']"],
 			["( Expr ) . ID", "$$ = ['get', $2, ['str', $5], 'obj']"],
-//			["Id [ Expr ]", "$$ = ['get', $1, $3, 'items']"],		
-//			["Get [ Expr ]", "$$ = ['get', $1, $3, 'items']"],			
-			["Expr [ Expr ]", "$$ = ['get', $1, $3, 'items']"],
 			["Id -> ID", "$$ = ['get', $1, ['str', $3], 'innate']"],
 			["Get -> ID", "$$ = ['get', $1, ['str', $3], 'innate']"],
 			["( Expr ) -> ID", "$$ = ['get', $2, ['str', $5], 'innate']"],
+			["Id => ID", "$$ = ['get', $1, ['str', $3], 'cc']"],
+			["Get => ID", "$$ = ['get', $1, ['str', $3], 'cc']"],
+			["( Expr ) => ID", "$$ = ['get', $2, ['str', $5], 'cc']"],
 		],
 		"FUNC": [
 			["& Dic", "$$ = [$2, [[]]]"],
