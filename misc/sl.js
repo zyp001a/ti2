@@ -136,6 +136,9 @@ classNew(def, "Main", [def.Struct], {
 funcNew(def, "log", function(s){
 	console.log(s);
 }, [["s"]])
+funcNew(def, "logx", function(s){
+	console.log(s.__);
+}, [["s"]])
 funcNew(def, "match", function(s, r){
   return !!s.match(new RegExp(r))
 }, [["s"], ["r"]])
