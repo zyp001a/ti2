@@ -213,15 +213,19 @@ var grammar = {
 		],		
 		Get: [
 			["Expr [ Expr ]", "$$ = ['get', $1, $3, 'items']"],			
-			["Id . ID", "$$ = ['get', $1, ['str', $3], 'obj']"],
-			["Get . ID", "$$ = ['get', $1, ['str', $3], 'obj']"],
-			["( Expr ) . ID", "$$ = ['get', $2, ['str', $5], 'obj']"],
-			["Id -> ID", "$$ = ['get', $1, ['str', $3], 'innate']"],
-			["Get -> ID", "$$ = ['get', $1, ['str', $3], 'innate']"],
-			["( Expr ) -> ID", "$$ = ['get', $2, ['str', $5], 'innate']"],
-			["Id => ID", "$$ = ['get', $1, ['str', $3], 'cc']"],
-			["Get => ID", "$$ = ['get', $1, ['str', $3], 'cc']"],
-			["( Expr ) => ID", "$$ = ['get', $2, ['str', $5], 'cc']"],
+			["Id . Getkey", "$$ = ['get', $1, $3, 'obj']"],
+			["Get . Getkey", "$$ = ['get', $1, $3, 'obj']"],
+			["( Expr ) . Getkey", "$$ = ['get', $2, $5, 'obj']"],
+			["Id -> Getkey", "$$ = ['get', $1, $3, 'innate']"],
+			["Get -> Getkey", "$$ = ['get', $1, $3, 'innate']"],
+			["( Expr ) -> Getkey", "$$ = ['get', $2, $5, 'innate']"],
+			["Id => Getkey", "$$ = ['get', $1, $3, 'scope']"],
+			["Get => Getkey", "$$ = ['get', $1, $3, 'scope']"],
+			["( Expr ) => Getkey", "$$ = ['get', $2, $5, 'scope']"],
+		],
+		Getkey: [
+			["ID", "$$ = ['str', $1]"],
+			["( Expr )", "$$ = $2"]
 		],
 		"FUNC": [
 			["& Dic", "$$ = [$2, [[]]]"],
