@@ -146,6 +146,10 @@ funcNew(def, "push", function(arr, e){
 	arr.push(e);
 	return e;
 }, [["arr"], ["e"]])
+funcNew(def, "unshift", function(arr, e){
+	arr.unshift(e);
+	return e;
+}, [["arr"], ["e"]])
 funcNew(def, "pop", function(arr){
 	return arr.pop();
 }, [["arr"]])
