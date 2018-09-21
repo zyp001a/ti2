@@ -207,6 +207,7 @@ funcNew(def, "ccGet", function(p, k){
 funcNew(def, "ccSet", function(p, k){	
 }, [["p"], ["k"]])
 funcNew(def, "objGet", async function(p, k){//property get
+	if(p[k] == undefined) return
 	return await exec(p[k], this);	
 }, [["p"], ["k"]])
 funcNew(def, "objSet", async function(p, k, v){//property get
@@ -705,7 +706,11 @@ function classSub(c, conf){
   return classNew(c.__.parent, name, [c], conf);
 }
 function cons(c, conf){
-  return classInit([c], conf);
+  var x= classInit([c], conf);
+	x.__.iscons = 1
+	x.__.cons = conf
+	x.__.consClass = c	
+	return x
 }
 function route(pscope, name, p){
 	if(!p) die("error");
@@ -740,6 +745,7 @@ function routeInit(){
 	});
 	return p;
 }
+
 function classInit(cla, conf){
 	var p = routeInit();
 	var x = p.__;
@@ -941,6 +947,7 @@ function type(obj){
     log(obj.toString());
     die("wrong obj")
   }
+	if(obj.__.iscons) return "Cons";	
 	if(obj.__.isclass) return "Class";
 	return "Scope";
 }
@@ -1033,7 +1040,10 @@ async function tplCall(str, args, conf){
 	return r.return;
 }
 async function call(func, argsn, conf, rawflag){
-	if(!func) die("error no func")
+	if(!func){
+		log(argsn[0])
+		die("error no func")
+	}
 	if(func.___.type == "FuncTpl"){//is FuncTpl
 		return await tplCall(func.func.val, argsn, conf);
 	}
