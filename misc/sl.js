@@ -187,6 +187,8 @@ funcNew(def, "objNew", function(c, v){
 }, [["c"], ["v"]])
 funcNew(def, "replaceAll", function(c, v){
 }, [["c"], ["v"]])
+funcNew(def, "replace", function(c, v){
+}, [["c"], ["v"]])
 funcNew(def, "die", function(o){
 	die(o)
 })
@@ -219,6 +221,7 @@ funcNew(def, "propGet", async function(p, k){//property get
 	if(p[k] == undefined) return undefined;
   var r = await exec(p[k], this);
   if(k == "func" && !r){
+		log(k)
     log(p[k])
     die("func not defined")
   }  
@@ -416,9 +419,9 @@ funcNew(def, "or", async function(l, r){
 	return (await exec(l, this)) || (await exec(r, this));
 }, [["l"], ["r"]], 1)
 
-funcNew(def, "suid", async function(){
-	var r = this.s.__.index.toString()
-	this.s.__.index ++;	
+funcNew(def, "suid", async function(env){
+	var r = env.s.__.index.toString()
+	env.s.__.index ++;	
 	return r
 })
 funcNew(def, "callNative", async function(func, args){
