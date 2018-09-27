@@ -146,6 +146,14 @@ funcNew(def, "push", function(arr, e){
 	arr.push(e);
 	return e;
 }, [["arr"], ["e"]])
+funcNew(def, "split", function(s, e){
+	
+	return s.split(e);
+}, [["s"], ["e"]])
+funcNew(def, "join", function(arr, e){
+	arr.join(e);
+	return e;
+}, [["arr"], ["e"]])
 funcNew(def, "unshift", function(arr, e){
 	arr.unshift(e);
 	return e;
@@ -377,6 +385,9 @@ funcNew(def, "fileRead", function(f){
 })
 funcNew(def, "pathResolve", function(f){
 	return path.resolve(f)
+}, [["f"]])
+funcNew(def, "pathDirname", function(f){
+	return path.dirname(f)
 }, [["f"]])
 funcNew(def, "fileExists", function(f){
 	return fs.existsSync(f)
